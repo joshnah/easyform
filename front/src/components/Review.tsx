@@ -117,6 +117,7 @@ export default function ReviewPdf() {
       <div
         style={{
           height: "100vh",
+          width: "75vw",
           position: "relative",
         }}
       >

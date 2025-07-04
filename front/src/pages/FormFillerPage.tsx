@@ -159,8 +159,8 @@ export default function FormFillingAI() {
   const progressValue = (currentStep / 3) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="mx-auto max-w-6xl">
+    <div className="flex h-full flex-col overflow-y-auto p-3">
+      <div className="mx-auto max-w-6xl pb-8">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold text-gray-900">
             Form Filling AI Tool
@@ -361,7 +361,7 @@ export default function FormFillingAI() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ReviewPdf></ReviewPdf>
+                  <ReviewPdf></ReviewPdf>
                 </CardContent>
               </Card>
 
