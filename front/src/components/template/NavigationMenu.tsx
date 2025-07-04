@@ -21,6 +21,11 @@ export default function NavigationMenu() {
               {t("titleHomePage")}
             </NavigationMenuLink>
           </Link>
+          <Link to="/x">
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              X Page
+            </NavigationMenuLink>
+          </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenuBase>

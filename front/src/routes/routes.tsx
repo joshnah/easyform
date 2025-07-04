@@ -1,6 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
 import { RootRoute } from "./__root";
 import FormFillingAI from "@/pages/FormFillerPage";
+import XPage from "@/pages/XPage";
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -26,4 +27,10 @@ export const HomeRoute = createRoute({
   component: FormFillingAI,
 });
 
-export const rootTree = RootRoute.addChildren([HomeRoute]);
+export const XRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: "/x",
+  component: XPage,
+});
+
+export const rootTree = RootRoute.addChildren([HomeRoute, XRoute]);
