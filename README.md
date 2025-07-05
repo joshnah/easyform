@@ -26,8 +26,11 @@ Once running, visit:
 | POST | `/pattern/detect` | Detect placeholder pattern from form text. |
 | POST | `/fill-entries/detect` | Detect fill entries in form lines. |
 | POST | `/fill-entries/process` | Process & fill entries using context data. |
+| POST | `/checkbox-entries/detect` | Detect checkbox groups (with their checkbox positions, labels, etc.) in form lines. |
+| POST | `/checkbox-entries/process` | Determine which boxes to check using context & update entries. |
 | POST | `/context/read` | Read `context_data.json` in a context directory. |
 | POST | `/context/add` | Add/update a key-value pair in `context_data.json`. |
+| POST | `/context/extract` | Run full context extraction pipeline for a dir (writes/returns `context_data.json`). |
 | GET  | `/health` | Simple health check. |
 
 ### JSON Schemas
@@ -61,6 +64,47 @@ Once running, visit:
     }
   },
   "required": ["lines", "number_of_fill_spots", "context_keys"]
+}
+```
+
+#### CheckboxEntry
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckboxEntry",
+  "type": "object",
+  "properties": {
+    "lines": {
+      "type": "string",
+      "description": "Multiline text snippet containing the checkbox group."
+    },
+    "checkbox_positions": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": { "type": "integer" },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "description": "List of (lineIndex, charIndex) tuples where each checkbox is located within `lines`."
+    },
+    "checkbox_values": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Human-readable label text next to each checkbox."
+    },
+    "context_key": {
+      "type": ["string", "null"],
+      "description": "Context key that this checkbox group maps to (if inferable)."
+    },
+    "checked_indices": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "description": "Indices into `checkbox_values` that should be checked." 
+    }
+  },
+  "required": ["lines", "checkbox_positions", "checkbox_values"]
 }
 ```
 

@@ -1,5 +1,5 @@
 import React from "react";
-import ToggleTheme from "@/components/ToggleTheme";
+// import ToggleTheme from "@/components/ToggleTheme";
 import InitialIcons from "@/components/template/InitialIcons";
 import { DialogDemo } from "@/components/x/DialogDemo";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,20 @@ export default function XPage() {
           Create File
         </Button>
         <Button onClick={
-          async () => { 
-            const stdout = await window.helloWorldContext.runBashScript() 
+          async () => {
+            const stdout = await window.helloWorldContext.runBashScript()
             setLog(stdout);
           }
         }>
           Run Bash Script
+        </Button>
+        <Button onClick={
+          async () => {
+            const stdout = await window.helloWorldContext.runBin()
+            setLog(stdout);
+          }
+        }>
+          Run Python Binary
         </Button>
       </div>
     </div>

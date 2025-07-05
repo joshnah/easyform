@@ -309,7 +309,7 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
                         except Exception as e:
                             logging.error(f"LLM extraction for key '{new_key}' failed: {e}")
 
-                if value:
+                if value and entry.context_keys[i] is None:
                     entry.context_keys[i] = new_key
                 else:
                     missing_keys.append(new_key)

@@ -21,6 +21,7 @@ interface HelloWorldContext {
   helloWorld: () => Promise<boolean>;
   createFile: (content: string) => Promise<boolean>;
   runBashScript: () => Promise<string>;
+  runBin: () => Promise<string>;
 }
 
 declare interface Window {
