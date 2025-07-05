@@ -80,4 +80,6 @@ forge.env.d.ts
 
 # Ignore generated test context and helper scripts
 test_context/
-test_run.sh 
+test_run.sh
+
+TASKS.md 
