@@ -26,13 +26,6 @@ Text:
 
 Return ONLY a valid JSON object with these keys. Use empty strings for missing fields, ONLY add the fields that are present in the text if you are sure about the value, otherwise leave it empty. Do not include any markdown formatting, code blocks, or explanatory text - just the raw JSON object.''' 
 
-FIELD_PROMPT_TEMPLATE = '''
-Given the following JSON object with user information:
-
-{info_json}
-
-Return ONLY the value associated with the key "{field_name}". If the key is missing or its value is empty, respond with an empty string. Do not include any additional text, explanation, or formatting — just the raw value.'''
-
 # ---------------------------------------------------------------------------
 # Centralized prompt generation helpers
 # ---------------------------------------------------------------------------
