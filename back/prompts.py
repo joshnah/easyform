@@ -30,45 +30,45 @@ Return ONLY a valid JSON object with these keys. Use empty strings for missing f
 # Centralized prompt generation helpers
 # ---------------------------------------------------------------------------
 
-from typing import List
+from typing import List, Optional
 
 
 def placeholder_detection_prompt(form_text: str) -> str:
     return (
-        f"You are a form analysis assistant. Look at this form text and identify ALL placeholder strings that represent blank fields to be filled in.\n\n"
+        "You are a form analysis assistant. Look at this form text and identify ALL placeholder strings that represent blank fields to be filled in.\n\n"
         f"FORM TEXT:\n{form_text}\n\n"
-        f"Find every placeholder string in the form that represents a field where information should be entered. "
-        f"These could be underscores, dots, dashes, text in brackets, text in parentheses, or any other pattern that indicates a fillable field.\n\n"
-        f"Respond with ONLY a JSON array containing the exact placeholder strings you find. "
-        f"Include each unique placeholder string exactly as it appears in the form. "
-        f"Format your response as a single line JSON array with no line breaks.\n\n"
-        f"Examples of what to look for:\n"
-        f"- _____ (underscores)\n"
-        f"- ..... (dots)\n"
-        f"- [Name] (text in brackets)\n"
-        f"- (Email) (text in parentheses)\n"
-        f"- Any other pattern that clearly represents a fillable field\n\n"
-        f"Example response: [\"_____\", \"[Name]\", \"(Date)\", \"........\"]\n"
-        f"Your response:"
+        "Find every placeholder string in the form that represents a field where information should be entered. "
+        "These could be underscores, dots, dashes, text in brackets, text in parentheses, or any other pattern that indicates a fillable field.\n\n"
+        "Respond with ONLY a JSON array containing the exact placeholder strings you find. "
+        "Include each unique placeholder string exactly as it appears in the form. "
+        "Format your response as a single line JSON array with no line breaks.\n\n"
+        "Examples of what to look for:\n"
+        "- _____ (underscores)\n"
+        "- ..... (dots)\n"
+        "- [Name] (text in brackets)\n"
+        "- (Email) (text in parentheses)\n"
+        "- Any other pattern that clearly represents a fillable field\n\n"
+        "Example response: [\"_____\", \"[Name]\", \"(Date)\", \"........\"]\n"
+        "Your response:"
     )
 
 
 def fill_entry_match_prompt(keys: List[str], entry_lines: str, num_spots: int) -> str:
     return (
-        f"You are a form-filling assistant. Your task is to match placeholders in form text to available context keys.\n\n"
+        "You are a form-filling assistant. Your task is to match placeholders in form text to available context keys.\n\n"
         f"AVAILABLE CONTEXT KEYS: {keys}\n\n"
         f"FORM TEXT TO ANALYZE:\n{entry_lines}\n\n"
-        f"INSTRUCTIONS:\n"
-        f"1. Placeholders are sequences of underscores (e.g., _____, ________)\n"
-        f"2. The form refers to the USER filling it – avoid interpreting roles like 'recipient', 'applicant', etc.\n"
-        f"3. Examine each placeholder in the order they appear in the text\n"
-        f"4. For each placeholder, determine if any of the available context keys would provide the appropriate information to fill it (prefer the most general key when multiple match)\n"
-        f"5. Only match a key if you are confident it's the correct information for that placeholder. The key must be in the list of AVAILABLE CONTEXT KEYS\n"
-        f"6. If no key matches or you're unsure, use null\n\n"
-        f"EXAMPLE:\n"
-        f"Text: 'Name: _______ Date: _______'\n"
-        f"Keys: ['full_name', 'birth_date', 'address']\n"
-        f"Response: ['full_name', 'birth_date']\n\n"
+        "INSTRUCTIONS:\n"
+        "1. Placeholders are sequences of underscores (e.g., _____, ________)\n"
+        "2. The form refers to the USER filling it – avoid interpreting roles like 'recipient', 'applicant', etc.\n"
+        "3. Examine each placeholder in the order they appear in the text\n"
+        "4. For each placeholder, determine if any of the available context keys would provide the appropriate information to fill it (prefer the most general key when multiple match)\n"
+        "5. Only match a key if you are confident it's the correct information for that placeholder. The key must be in the list of AVAILABLE CONTEXT KEYS\n"
+        "6. If no key matches or you're unsure, use null\n\n"
+        "EXAMPLE:\n"
+        "Text: 'Name: _______ Date: _______'\n"
+        "Keys: ['full_name', 'birth_date', 'address']\n"
+        "Response: ['full_name', 'birth_date']\n\n"
         f"Respond with ONLY a JSON array of {num_spots} elements (keys or null):"
     )
 
@@ -96,7 +96,7 @@ def checkbox_context_key_prompt(keys: List[str], group_text: str, checkbox_value
         f"AVAILABLE CONTEXT KEYS: {keys}\n\n"
         f"CHECKBOX GROUP:\n{group_text}\n\n"
         f"CHECKBOX OPTIONS: {checkbox_values}\n\n"
-        f"INSTRUCTIONS:\n"
+        "INSTRUCTIONS:\n"
         "1. Look at the context around the checkboxes\n"
         "2. Remember the form is about the USER themselves; avoid role-specific prefixes (e.g., 'applicant', 'patient').\n"
         "3. Determine what type of information these checkboxes represent\n"
@@ -115,7 +115,7 @@ def checkbox_infer_key_prompt(group_text: str, checkbox_values: List[str]) -> st
         f"You are a form-filling assistant. Analyze this checkbox group and suggest an appropriate context key name.\n\n"
         f"CHECKBOX GROUP:\n{group_text}\n\n"
         f"CHECKBOX OPTIONS: {checkbox_values}\n\n"
-        f"INSTRUCTIONS:\n"
+        "INSTRUCTIONS:\n"
         "1. Look at the context around the checkboxes\n"
         "2. Determine what type of information these checkboxes represent\n"
         "3. Suggest a descriptive key name using snake_case (e.g., 'gender', 'marital_status', 'education_level')\n"
@@ -147,4 +147,99 @@ def checkbox_selection_prompt(context_key: str, context_value: str, checkbox_val
         "Context: 'Single', Options: ['Single', 'Married', 'Divorced'] → [0]\n"
         "Context: 'Bachelor Degree', Options: ['High School', 'College', 'Graduate'] → [1]\n\n"
         "Respond with ONLY a JSON array of indices (e.g., [0], [1, 2], or []):"
+    )
+
+# ---------------------------------------------------------------------------
+# Additional prompt helpers used by process_fill_entries in fill_processor.py
+# ---------------------------------------------------------------------------
+
+def _ordinal_suffix(index: int) -> str:
+    """Return the ordinal suffix for 1-based *index* (e.g., 1 -> 'st')."""
+    if 10 <= (index % 100) <= 20:
+        return "th"
+    return {1: "st", 2: "nd", 3: "rd"}.get(index % 10, "th")
+
+
+def missing_key_inference_prompt(
+    entry_lines: str,
+    placeholder_context: str,
+    placeholder_idx_zero_based: int,
+    placeholder_pattern: str,
+) -> str:
+    """Prompt for suggesting a context key name for a missing placeholder.
+
+    Args:
+        entry_lines: Full text of the form block being analysed.
+        placeholder_context: The specific line (or snippet) containing the placeholder.
+        placeholder_idx_zero_based: Index of the placeholder (0-based).
+        placeholder_pattern: Regex pattern string that identifies placeholders.
+
+    Returns:
+        A fully-formed prompt string.
+    """
+    i = placeholder_idx_zero_based + 1
+    ordinal = _ordinal_suffix(i)
+    return (
+        "You are a form-filling assistant. Analyze this form text and suggest an appropriate context key name.\n\n"
+        f"FORM TEXT:\n{entry_lines}\n\n"
+        f"SPECIFIC PLACEHOLDER #{i}:\n{placeholder_context}\n\n"
+        "INSTRUCTIONS:\n"
+        f"1. Look at the context around placeholder #{i} (the {i}{ordinal} match of the placeholder pattern {placeholder_pattern})\n"
+        "2. Determine what type of information should go in this placeholder\n"
+        "3. Suggest a descriptive key name using snake_case (e.g., 'full_name', 'phone_number', 'birth_date')\n"
+        "4. The person filling the form is always the USER themselves – avoid qualifiers like 'recipient', 'patient', 'applicant', etc.\n"
+        "5. Pick the most general and concise key name possible (e.g., prefer 'name' over 'recipients_name').\n\n"
+        "EXAMPLES:\n"
+        "- 'Name: _______' → 'full_name'\n"
+        "- 'Phone: _______' → 'phone_number'\n"
+        "- 'Date of Birth: _______' → 'birth_date'\n"
+        "- 'Recipient's Name: _______' → 'name'\n\n"
+        "Respond with ONLY the key name (no quotes, no explanation):"
+    )
+
+
+def context_value_search_prompt(new_key: str, aggregated_corpus: str) -> str:
+    """Prompt for retrieving a value for *new_key* from *aggregated_corpus*."""
+    return (
+        "You are an assistant tasked with retrieving information from a user's personal document corpus.\n\n"
+        f"REQUESTED KEY: {new_key}\n\n"
+        f"CORPUS:\n{aggregated_corpus}\n\n"
+        "INSTRUCTIONS:\n"
+        "1. Examine the corpus and determine the single most appropriate value for the requested key.\n"
+        "2. If the information is clearly present, respond with ONLY that value.\n"
+        "3. If the information is not present or you are uncertain, respond with the single word null (without quotes).\n"
+        "4. Do NOT provide any additional text, explanation, or formatting."
+    )
+
+
+def fill_line_prompt(
+    entry_lines: str,
+    values: List[Optional[str]],
+    placeholder_pattern: str,
+    line: str,
+    line_index_zero_based: int,
+) -> str:
+    """Prompt for filling a single line that contains placeholders.
+
+    Args:
+        entry_lines: Full text for the current fill-entry block.
+        values: List of values corresponding to each placeholder in *entry_lines*.
+        placeholder_pattern: Regex pattern string identifying placeholders.
+        line: The specific line to fill.
+        line_index_zero_based: Index of *line* within the block (0-based).
+    """
+    j = line_index_zero_based + 1
+    return (
+        "You are a form-filling assistant. Fill the placeholders in the given line with appropriate values.\n\n"
+        f"FULL FORM CONTEXT:\n{entry_lines}\n\n"
+        f"AVAILABLE VALUES: {values}\n\n"
+        f"PLACEHOLDER PATTERN: {placeholder_pattern}\n\n"
+        "INSTRUCTIONS:\n"
+        "1. The i-th placeholder in the FULL FORM should be filled with values[i] if values[i] is not None\n"
+        "2. If values[i] is None, leave the i-th placeholder unchanged\n"
+        f"3. Placeholders are matched by the pattern: {placeholder_pattern}\n"
+        "4. Only modify the line I'm asking about, preserve all other formatting\n\n"
+        "5. If the placeholder can be filled with a value, that placeholder MUST be FULLY replaced by the value\n"
+        f"LINE TO FILL (line {j}):\n{line}\n\n"
+        "Respond with ONLY the filled version of this line, DO NOT include any other text:"
     ) 

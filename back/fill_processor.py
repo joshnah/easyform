@@ -13,7 +13,13 @@ from dataclasses import dataclass
 from typing import List, Optional, cast
 from .context_extractor import extract_context
 from .llm_client import query_gpt
-from .prompts import fill_entry_match_prompt, fill_entry_retry_prompt
+from .prompts import (
+    fill_entry_match_prompt,
+    fill_entry_retry_prompt,
+    missing_key_inference_prompt,
+    context_value_search_prompt,
+    fill_line_prompt,
+)
 
 
 @dataclass
@@ -247,22 +253,11 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
                             placeholder_context = line
                             break
                 
-                prompt = (
-                    f"You are a form-filling assistant. Analyze this form text and suggest an appropriate context key name.\n\n"
-                    f"FORM TEXT:\n{entry.lines}\n\n"
-                    f"SPECIFIC PLACEHOLDER #{i+1}:\n{placeholder_context}\n\n"
-                    f"INSTRUCTIONS:\n"
-                    f"1. Look at the context around placeholder #{i+1} (the {i+1}{'st' if i==0 else 'nd' if i==1 else 'rd' if i==2 else 'th'} match of the placeholder pattern {placeholder_pattern.pattern})\n"
-                    f"2. Determine what type of information should go in this placeholder\n"
-                    f"3. Suggest a descriptive key name using snake_case (e.g., 'full_name', 'phone_number', 'birth_date')\n"
-                    f"4. The person filling the form is always the USER themselves – avoid qualifiers like 'recipient', 'patient', 'applicant', etc.\n"
-                    f"5. Pick the most general and concise key name possible (e.g., prefer 'name' over 'recipients_name').\n\n"
-                    f"EXAMPLES:\n"
-                    f"- 'Name: _______' → 'full_name'\n"
-                    f"- 'Phone: _______' → 'phone_number'\n"
-                    f"- 'Date of Birth: _______' → 'birth_date'\n"
-                    f"- 'Recipient's Name: _______' → 'name'\n\n"
-                    f"Respond with ONLY the key name (no quotes, no explanation):"
+                prompt = missing_key_inference_prompt(
+                    entry.lines,
+                    placeholder_context,
+                    i,
+                    placeholder_pattern.pattern,
                 )
                 new_key = query_gpt(prompt).strip().strip('"')
                 # Get value from context_data
@@ -285,16 +280,7 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
                             aggregated_corpus = ""
 
                     if aggregated_corpus:
-                        search_prompt = (
-                            f"You are an assistant tasked with retrieving information from a user's personal document corpus.\n\n"
-                            f"REQUESTED KEY: {new_key}\n\n"
-                            f"CORPUS:\n{aggregated_corpus}\n\n"
-                            f"INSTRUCTIONS:\n"
-                            f"1. Examine the corpus and determine the single most appropriate value for the requested key.\n"
-                            f"2. If the information is clearly present, respond with ONLY that value.\n"
-                            f"3. If the information is not present or you are uncertain, respond with the single word null (without quotes).\n"
-                            f"4. Do NOT provide any additional text, explanation, or formatting."
-                        )
+                        search_prompt = context_value_search_prompt(new_key, aggregated_corpus)
                         try:
                             raw_resp = query_gpt(search_prompt).strip()
                             # Clean common wrapper artefacts (markdown, quotes)
@@ -329,19 +315,12 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
             # Check if this line has placeholders
             if placeholder_pattern.search(line):
                 # Prepare prompt for LLM to fill this specific line
-                prompt = (
-                    f"You are a form-filling assistant. Fill the placeholders in the given line with appropriate values.\n\n"
-                    f"FULL FORM CONTEXT:\n{entry.lines}\n\n"
-                    f"AVAILABLE VALUES: {values}\n\n"
-                    f"PLACEHOLDER PATTERN: {placeholder_pattern.pattern}\n\n"
-                    f"INSTRUCTIONS:\n"
-                    f"1. The i-th placeholder in the FULL FORM should be filled with values[i] if values[i] is not None\n"
-                    f"2. If values[i] is None, leave the i-th placeholder unchanged\n"
-                    f"3. Placeholders are matched by the pattern: {placeholder_pattern.pattern}\n"
-                    f"4. Only modify the line I'm asking about, preserve all other formatting\n\n"
-                    f"5. If the placeholder can be filled with a value, that placeholder MUST be FULLY replaced by the value\n"
-                    f"LINE TO FILL (line {j+1}):\n{line}\n\n"
-                    f"Respond with ONLY the filled version of this line, DO NOT include any other text:"
+                prompt = fill_line_prompt(
+                    entry.lines,
+                    values,
+                    placeholder_pattern.pattern,
+                    line,
+                    j,
                 )
                 
                 filled_line = query_gpt(prompt).strip()
