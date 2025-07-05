@@ -46,7 +46,7 @@ def main():
     lines = text.split("\n")
 
     # 4) Detect placeholder pattern
-    patt_resp = post("/pattern/detect", {"text": text})
+    patt_resp = post("/pattern/detect", {"text": text, "provider": "groq"})
     pattern = patt_resp["pattern"]
 
     # 5) Detect & process fill entries
