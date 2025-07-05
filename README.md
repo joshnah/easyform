@@ -55,3 +55,36 @@ uvicorn back.api:app --reload
 ```
 
 The FastAPI documentation UI (`/docs`) automatically exposes these schemas for all request/response payloads.
+
+## Quick Local Test Run
+```bash
+# 1) Create & activate a virtual environment (first time only)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2) Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 3) Run the demo
+chmod +x test_run.sh  # if not already executable
+./test_run.sh         # optional CLI flags can be appended
+```
+
+The script executes:
+
+```bash
+python -m back.cli --contextDir ./test_context --form ./form_pdf_long.pdf
+```
+
+After completion a filled PDF will be written next to the original file.
+
+---
+
+If you just want to start the FastAPI server instead:
+
+```bash
+uvicorn back.api:app --reload
+```
+
+and navigate to `http://127.0.0.1:8000/docs` for the interactive swagger UI.
