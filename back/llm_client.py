@@ -12,6 +12,9 @@ import sys
 import threading
 import time
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Try to import both clients
 try:
@@ -254,7 +257,7 @@ def query_gpt(
 
                 result = content.strip()
                 logging.debug(f"{provider} API response: {result[:100]}...")
-                return 
+                return result
             elif provider == "anythingllm":
                 data = {
                     "message": prompt,
@@ -271,7 +274,7 @@ def query_gpt(
                     logging.error(
                         f"AnythingLLM API call failed: {response.status_code} {response.text}"
                     )
-                    return ""
+                    return
 
                 result = response.json().get("textResponse").strip()
                 logging.debug(f"AnythingLLM API response: {result[:100]}...")
