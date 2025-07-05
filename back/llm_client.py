@@ -96,7 +96,7 @@ def init_groq() -> Optional[Groq]:
 def init_anythingllm():
     """Initialize the AnythingLLM client using the ANYTHINGLLM_API_KEY environment variable."""
     try:
-        with open("config.yaml", "r") as file:
+        with open("./back/config.yaml", "r") as file:
             config = yaml.safe_load(file)
     except FileNotFoundError:
         raise FileNotFoundError(
@@ -274,7 +274,7 @@ def query_gpt(
                     logging.error(
                         f"AnythingLLM API call failed: {response.status_code} {response.text}"
                     )
-                    return
+                    return ""
 
                 result = response.json().get("textResponse").strip()
                 logging.debug(f"AnythingLLM API response: {result[:100]}...")
