@@ -28,7 +28,8 @@ def detect_placeholder_patterns(form_text: str) -> re.Pattern:
     placeholder_strings = None
     
     for try_count in range(max_tries):
-        response = query_gpt(prompt)
+        # response = query_gpt(prompt)
+        response = query_gpt(prompt=prompt, provider="groq")
         
         # Clean and parse response
         clean = response.strip()

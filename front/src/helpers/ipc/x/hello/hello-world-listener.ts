@@ -9,6 +9,7 @@ import {
   HELLO_WORLD_CHANNEL,
   CREATE_FILE_CHANNEL,
   RUN_BASH_SCRIPT_CHANNEL,
+  RUN_BIN_CHANNEL,
 } from "./hello-world-channels";
 
 const execAsync = promisify(exec);
@@ -67,6 +68,39 @@ export function helloWorldListener() {
 
     try {
       const { stdout, stderr } = await execAsync(`bash "${scriptPath}"`);
+
+      if (stderr) {
+        console.error('Script stderr:', stderr);
+        // Note: stderr doesn't always mean error, some programs output to stderr
+      }
+
+      console.log('Script stdout:', stdout);
+      return stdout.trim(); // trim to remove trailing newlines
+    } catch (error) {
+      console.error('Execution error:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(RUN_BIN_CHANNEL, async () => {
+    let scriptPath: string;
+    if (app.isPackaged) {
+      scriptPath = path.join(process.resourcesPath, 'assets/python', 'helloworld');
+    } else {
+      scriptPath = path.join(app.getAppPath(), 'src/assets/python', 'helloworld');
+    }
+
+    console.log(`Running bash script: ${scriptPath}`);
+
+    const fs = require('fs');
+    if (!fs.existsSync(scriptPath)) {
+      console.error(`Script not found at: ${scriptPath}`);
+      throw new Error(`Script not found at: ${scriptPath}`);
+    }
+
+    try {
+      // const { stdout, stderr } = await execAsync(`bash "${scriptPath}"`);
+      const { stdout, stderr } = await execAsync(`${scriptPath}`);
 
       if (stderr) {
         console.error('Script stderr:', stderr);
