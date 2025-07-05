@@ -12,6 +12,36 @@ import pytesseract
 import cv2
 import numpy as np
 import concurrent.futures
+import threading
+
+# Add Docling import (optional fallback)
+try:
+    from docling.document_converter import DocumentConverter
+except ImportError:
+    DocumentConverter = None  # type: ignore
+    logging.warning("Docling library not installed, using fallback extraction methods.")
+
+# Thread-local storage so every worker thread gets its own converter instance.
+_thread_local = threading.local()
+
+# Protect first-time instantiation so we don't spawn many heavyweight pipelines at once.
+_converter_init_lock = threading.Lock()
+
+
+def _get_docling_converter():
+    """Return a thread-local DocumentConverter (or None if unavailable)."""
+    if DocumentConverter is None:
+        return None
+    if getattr(_thread_local, "converter", None) is None:
+        with _converter_init_lock:
+            # Double-check to avoid races inside the lock
+            if getattr(_thread_local, "converter", None) is None:
+                try:
+                    _thread_local.converter = DocumentConverter()
+                except Exception as e:
+                    logging.error(f"Unable to initialise Docling converter in thread: {e}")
+                    _thread_local.converter = None
+    return _thread_local.converter
 
 
 def scan_context_dir(dir_path):
@@ -23,8 +53,34 @@ def scan_context_dir(dir_path):
     return files
 
 
+def _extract_with_docling(path):
+    """Attempt to extract text using Docling. Returns text or None on failure/unavailability."""
+    converter = _get_docling_converter()
+    if converter is None:
+        return None
+    try:
+        # Each thread has its own converter, so we attempt conversion without a global lock.
+        result = converter.convert(path)
+        if result and hasattr(result, 'document'):
+            doc = result.document
+            # Prefer markdown export, fall back to raw text if available
+            if hasattr(doc, 'export_to_markdown'):
+                return doc.export_to_markdown()
+            elif hasattr(doc, 'export_to_text'):
+                return doc.export_to_text()
+        return None
+    except Exception as e:
+        logging.error(f"Docling failed to extract {path}: {e}")
+        return None
+
+
 def extract_docx(path):
-    """Extract text from DOCX file."""
+    """Extract text from DOCX file, preferring Docling when available."""
+    # Try Docling first for unified extraction
+    docling_text = _extract_with_docling(path)
+    if docling_text:
+        return docling_text
+    # Fallback to legacy extraction
     try:
         doc = Document(path)
         texts = [p.text for p in doc.paragraphs]
@@ -55,7 +111,12 @@ def preprocess_for_ocr(pil_img):
 
 
 def extract_pdf(path):
-    """Extract text from PDF: use pdfplumber, fallback to PDF-to-image conversion + OCR."""
+    """Extract text from PDF, preferring Docling when available."""
+    # Try Docling first
+    docling_text = _extract_with_docling(path)
+    if docling_text:
+        return docling_text
+    # Fallback to legacy extraction
     try:
         # First try pdfplumber for text extraction
         with pdfplumber.open(path) as pdf:
@@ -66,18 +127,14 @@ def extract_pdf(path):
             plumber_result = '\n'.join(plumber_texts).strip()
             if plumber_result:
                 return plumber_result
-        
         # Fallback: convert PDF to images and use OCR
         logging.info(f"No text found with pdfplumber, converting PDF to images for OCR: {path}")
         images = convert_from_path(path, dpi=200)
         texts = []
         for i, image in enumerate(images):
             logging.debug(f"Processing page {i+1} of {len(images)} from PDF")
-            # Use the existing extract_image logic by creating a temporary image
-            # We'll pass the PIL Image directly to a modified version of the OCR logic
             text = extract_image_from_pil(image)
             texts.append(text)
-        
         return '\n'.join(texts)
     except Exception as e:
         logging.error(f"Error extracting PDF {path}: {e}")
@@ -85,7 +142,12 @@ def extract_pdf(path):
 
 
 def extract_image(path):
-    """Perform OCR on an image file with enhanced DPI scaling and specialized preprocessing."""
+    """Perform OCR on an image file, preferring Docling when available."""
+    # Try Docling first
+    docling_text = _extract_with_docling(path)
+    if docling_text:
+        return docling_text
+    # Fallback to legacy OCR pipeline
     try:
         # Load and upscale image
         img = Image.open(path).convert('RGB')
