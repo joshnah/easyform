@@ -16,7 +16,6 @@ from .font_manager import get_available_font, get_fonts_cache_dir
 from .fill_processor import detect_fill_entries, process_fill_entries
 from .text_utils import sanitize_unicode_for_pdf
 from .context_extractor import extract_context
-from .llm_client import query_gpt
 
 
 def fill_pdf(keys: List[str], form_path: str, context_dir: str, output_path: Optional[str], placeholder_pattern) -> str:
