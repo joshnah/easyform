@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import List, Optional, cast
 from .context_extractor import extract_context
 from .llm_client import query_gpt
+from .prompts import fill_entry_match_prompt, fill_entry_retry_prompt
 
 
 @dataclass
@@ -92,23 +93,7 @@ def detect_fill_entries(lines: List[str], keys: List[str], placeholder_pattern: 
     for group in groups:
         entry_lines = '\n'.join(lines[i] for i in group)
         num_spots = len(placeholder_pattern.findall(entry_lines))
-        prompt = (
-            f"You are a form-filling assistant. Your task is to match placeholders in form text to available context keys.\n\n"
-            f"AVAILABLE CONTEXT KEYS: {keys}\n\n"
-            f"FORM TEXT TO ANALYZE:\n{entry_lines}\n\n"
-            f"INSTRUCTIONS:\n"
-            f"1. Placeholders are sequences of underscores (e.g., _____, ________)\n"
-            f"2. The form refers to the USER filling it – avoid interpreting roles like 'recipient', 'applicant', etc.\n"
-            f"3. Examine each placeholder in the order they appear in the text\n"
-            f"4. For each placeholder, determine if any of the available context keys would provide the appropriate information to fill it (prefer the most general key when multiple match)\n"
-            f"5. Only match a key if you are confident it's the correct information for that placeholder. The key must be in the list of AVAILABLE CONTEXT KEYS\n"
-            f"6. If no key matches or you're unsure, use null\n\n"
-            f"EXAMPLE:\n"
-            f"Text: 'Name: _______ Date: _______'\n"
-            f"Keys: ['full_name', 'birth_date', 'address']\n"
-            f"Response: ['full_name', 'birth_date']\n\n"
-            f"Respond with ONLY a JSON array of {num_spots} elements (keys or null):"
-        )
+        prompt = fill_entry_match_prompt(keys, entry_lines, num_spots)
         # Try parsing with retry logic for better reliability
         # If the LLM returns malformed JSON, we retry with increasingly specific instructions
         max_tries = 3
@@ -120,19 +105,7 @@ def detect_fill_entries(lines: List[str], keys: List[str], placeholder_pattern: 
                 response = query_gpt(prompt)
             else:
                 # Retry with more specific formatting instructions
-                retry_prompt = (
-                    f"IMPORTANT: Your previous response could not be parsed as JSON. Please respond with EXACTLY the format requested.\n\n"
-                    f"{prompt}\n\n"
-                    f"CRITICAL FORMATTING REQUIREMENTS:\n"
-                    f"1. Respond with ONLY a JSON array, nothing else\n"
-                    f"2. Use double quotes, not single quotes\n"
-                    f"3. Use null (not None) for missing values\n"
-                    f"4. Do not include any explanations or code blocks\n"
-                    f"5. The array must have exactly {num_spots} elements\n"
-                    f"6. Each element must be either null or one of the AVAILABLE CONTEXT KEYS exactly as provided (case-sensitive)\n\n"
-                    f"Example of correct format: [null, \"key_name\", null]\n"
-                    f"Your response:"
-                )
+                retry_prompt = fill_entry_retry_prompt(keys, entry_lines, num_spots)
                 response = query_gpt(retry_prompt)
             
             # Clean and parse response
@@ -378,13 +351,13 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
                 filled_lines.append(line)
         
         entry.filled_lines = "\n".join(filled_lines)
-    # # Pretty print the filled entries for inspection
-    # import pprint
-    # pprint.pprint([{
-    #     "lines": entry.lines,
-    #     "context_keys": entry.context_keys,
-    #     "filled_lines": entry.filled_lines
-    # } for entry in entries])
+    # Pretty print the filled entries for inspection
+    import pprint
+    pprint.pprint([{
+        "lines": entry.lines,
+        "context_keys": entry.context_keys,
+        "filled_lines": entry.filled_lines
+    } for entry in entries])
     return entries
 
 

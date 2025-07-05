@@ -9,6 +9,7 @@ import re
 import json
 import logging
 from .llm_client import query_gpt
+from .prompts import placeholder_detection_prompt
 
 # Default fallback pattern - will be replaced by dynamic detection
 DEFAULT_PLACEHOLDER_PATTERN = re.compile(r'_+')
@@ -20,23 +21,7 @@ def detect_placeholder_patterns(form_text: str) -> re.Pattern:
     Use LLM to detect actual placeholder strings in the form text and return a combined regex pattern.
     Falls back to default underscore pattern if detection fails.
     """
-    prompt = (
-        f"You are a form analysis assistant. Look at this form text and identify ALL placeholder strings that represent blank fields to be filled in.\n\n"
-        f"FORM TEXT:\n{form_text}\n\n"
-        f"Find every placeholder string in the form that represents a field where information should be entered. "
-        f"These could be underscores, dots, dashes, text in brackets, text in parentheses, or any other pattern that indicates a fillable field.\n\n"
-        f"Respond with ONLY a JSON array containing the exact placeholder strings you find. "
-        f"Include each unique placeholder string exactly as it appears in the form. "
-        f"Format your response as a single line JSON array with no line breaks.\n\n"
-        f"Examples of what to look for:\n"
-        f"- _____ (underscores)\n"
-        f"- ..... (dots)\n"
-        f"- [Name] (text in brackets)\n"
-        f"- (Email) (text in parentheses)\n"
-        f"- Any other pattern that clearly represents a fillable field\n\n"
-        f"Example response: [\"_____\", \"[Name]\", \"(Date)\", \"........\"]\n"
-        f"Your response:"
-    )
+    prompt = placeholder_detection_prompt(form_text)
     
     # Try parsing with retry logic
     max_tries = 3
