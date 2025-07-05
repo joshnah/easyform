@@ -21,32 +21,38 @@ run = "uv pip freeze > requirements.txt"
 [tasks.start-backend]
 description = "Start backend server"
 alias = "sb"
+dir = "{{config_root}}"
 run = "uvicorn back.api:app --host 0.0.0.0 --port 8000 --reload"
 
 [tasks.start-frontend]
 description = "Start backend server"
 alias = "sf"
-run = "cd front && npm start"
+dir = "{{config_root}}/front"
+run = "npm start"
 
 [tasks.back-cli]
 description = "Start back CLI"
 alias = "cli"
+dir = "{{config_root}}"
 run = "python -m back.cli"
 
 [tasks.back-cli-help]
 description = "Backend CLI help"
 alias = "cli-h"
+dir = "{{config_root}}"
 run = "python -m back.cli -h"
 
 [tasks.update-context]
 description = "Update context to fill form"
 alias = "uc"
+dir = "{{config_root}}"
 run = "rm ~/easyform/context/context_data.json && python -m back.cli --contextDir ~/easyform/context --provider groq"
 
 [tasks.bundle-backend]
 description = "Bundle backend with frontend"
 alias = "bb"
-run = "pyinstaller server.spec --clean --distpath {{config_root}}/front/src/assets/python"
+dir = "{{config_root}}"
+run = "pyinstaller server.spec --clean --distpath ./front/src/assets/python"
 
 [settings]
 python.uv_venv_auto = true

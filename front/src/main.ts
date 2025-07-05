@@ -2,7 +2,8 @@ import { app, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 // "electron-squirrel-startup" seems broken when packaging with vite
 //import started from "electron-squirrel-startup";
-import path from "path";
+import path from 'path';
+import { exec } from 'child_process';
 import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
@@ -10,7 +11,7 @@ import {
 
 const inDevelopment = process.env.NODE_ENV === "development";
 
-function createWindow() {
+async function createWindow() {
   const preload = path.join(__dirname, "preload.js");
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -25,6 +26,36 @@ function createWindow() {
     },
     titleBarStyle: "hidden",
   });
+  // Start backend
+  let scriptPath: string;
+  if (app.isPackaged) {
+    scriptPath = path.join(process.resourcesPath, 'assets/python', 'server');
+  } else {
+    scriptPath = path.join(app.getAppPath(), 'src/assets/python', 'server');
+  }
+
+  console.log(`Running bash script: ${scriptPath}`);
+
+  const fs = require('fs');
+  if (!fs.existsSync(scriptPath)) {
+    console.error(`Script not found at: ${scriptPath}`);
+    throw new Error(`Script not found at: ${scriptPath}`);
+  }
+
+  try {
+    const { stdout, stderr } = exec(`${scriptPath}`);
+
+    if (stderr) {
+      console.error('Script stderr:', stderr);
+      // Note: stderr doesn't always mean error, some programs output to stderr
+    }
+
+    console.log("Server starts successfully");
+  } catch (error) {
+    console.error('Execution error:', error);
+    throw error;
+  }
+
   registerListeners(mainWindow);
   mainWindow.webContents.openDevTools({ mode: 'detach' });
 
