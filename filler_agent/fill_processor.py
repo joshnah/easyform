@@ -378,13 +378,13 @@ def process_fill_entries(entries: List[FillEntry], context_dir: str, placeholder
                 filled_lines.append(line)
         
         entry.filled_lines = "\n".join(filled_lines)
-    # Pretty print the filled entries for inspection
-    import pprint
-    pprint.pprint([{
-        "lines": entry.lines,
-        "context_keys": entry.context_keys,
-        "filled_lines": entry.filled_lines
-    } for entry in entries])
+    # # Pretty print the filled entries for inspection
+    # import pprint
+    # pprint.pprint([{
+    #     "lines": entry.lines,
+    #     "context_keys": entry.context_keys,
+    #     "filled_lines": entry.filled_lines
+    # } for entry in entries])
     return entries
 
 
