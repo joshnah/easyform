@@ -2,11 +2,21 @@
 
 ## Backend API (FastAPI)
 
-Run the server:
+Run the server (with auto-reload) and open the interactive docs:
 
 ```bash
-uvicorn back.api:app --reload
+# Preferred
+python -m back.server
+
+# Equivalent (explicit Uvicorn invocation)
+uvicorn back.api:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Once running, visit:
+
+* Swagger UI: http://localhost:8000/docs  
+* ReDoc:      http://localhost:8000/redoc  
+* Raw OpenAPI JSON: http://localhost:8000/openapi.json
 
 ### Endpoints
 
