@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 from .pattern_detection import CHECKBOX_PATTERN
 from .context_extractor import extract_context
 from .llm_client import query_gpt
+from .prompts import checkbox_context_key_prompt, checkbox_infer_key_prompt, checkbox_selection_prompt
 
 
 @dataclass
@@ -103,45 +104,13 @@ def process_checkbox_entries(entries: List[CheckboxEntry], context_dir: str, key
     
     for entry in entries:
         # Ask LLM to match this checkbox group to a context key
-        prompt = (
-            f"You are a form-filling assistant. Analyze this checkbox group and determine which context key is most relevant.\n\n"
-            f"AVAILABLE CONTEXT KEYS: {keys}\n\n"
-            f"CHECKBOX GROUP:\n{entry.lines}\n\n"
-            f"CHECKBOX OPTIONS: {entry.checkbox_values}\n\n"
-            f"INSTRUCTIONS:\n"
-            f"1. Look at the context around the checkboxes\n"
-            f"2. Remember the form is about the USER themselves; avoid role-specific prefixes (e.g., 'applicant', 'patient').\n"
-            f"3. Determine what type of information these checkboxes represent\n"
-            f"4. Find the most relevant context key from the available keys (use the most general name possible)\n"
-            f"5. If no key is clearly relevant, respond with 'none'\n\n"
-            f"EXAMPLES:\n"
-            f"- Checkboxes for 'Gender: [ ] Male [ ] Female' → 'gender'\n"
-            f"- Checkboxes for 'Marital Status: [ ] Single [ ] Married' → 'marital_status'\n"
-            f"- Checkboxes for 'Education: [ ] High School [ ] College' → 'education'\n\n"
-            f"Respond with ONLY the key name or 'none' (no quotes, no explanation):"
-        )
+        prompt = checkbox_context_key_prompt(keys, entry.lines, entry.checkbox_values)
         
         response = query_gpt(prompt).strip().strip('"').lower()
         
         if response == 'none' or response not in keys:
             # Try to infer a new context key
-            infer_prompt = (
-                f"You are a form-filling assistant. Analyze this checkbox group and suggest an appropriate context key name.\n\n"
-                f"CHECKBOX GROUP:\n{entry.lines}\n\n"
-                f"CHECKBOX OPTIONS: {entry.checkbox_values}\n\n"
-                f"INSTRUCTIONS:\n"
-                f"1. Look at the context around the checkboxes\n"
-                f"2. Determine what type of information these checkboxes represent\n"
-                f"3. Suggest a descriptive key name using snake_case (e.g., 'gender', 'marital_status', 'education_level')\n"
-                f"4. The form is filled by the USER – avoid qualifiers like 'applicant', 'patient', 'recipient', etc.\n"
-                f"5. Use the most general and concise key name possible (e.g., 'gender' not 'applicant_gender').\n\n"
-                f"EXAMPLES:\n"
-                f"- 'Gender: [ ] Male [ ] Female' → 'gender'\n"
-                f"- 'Marital Status: [ ] Single [ ] Married' → 'marital_status'\n"
-                f"- 'Education: [ ] High School [ ] College' → 'education_level'\n"
-                f"- 'Applicant Gender: [ ] Male [ ] Female' → 'gender'\n\n"
-                f"Respond with ONLY the key name (no quotes, no explanation):"
-            )
+            infer_prompt = checkbox_infer_key_prompt(entry.lines, entry.checkbox_values)
             
             inferred_key = query_gpt(infer_prompt).strip().strip('"').lower()
             
@@ -168,23 +137,7 @@ def process_checkbox_entries(entries: List[CheckboxEntry], context_dir: str, key
         
         # Now determine which checkboxes should be checked based on the context value
         if entry.context_key and context_value:
-            selection_prompt = (
-                f"You are a form-filling assistant. Determine which checkboxes should be checked based on the context value.\n\n"
-                f"CONTEXT KEY: {entry.context_key}\n"
-                f"CONTEXT VALUE: {context_value}\n\n"
-                f"CHECKBOX OPTIONS: {entry.checkbox_values}\n\n"
-                f"INSTRUCTIONS:\n"
-                f"1. Compare the context value with each checkbox option\n"
-                f"2. Determine which checkbox options match or are most relevant to the context value\n"
-                f"3. Return the indices (0-based) of checkboxes that should be checked\n"
-                f"4. If no checkboxes should be checked, return an empty array\n"
-                f"5. Multiple checkboxes can be checked if appropriate\n\n"
-                f"EXAMPLES:\n"
-                f"Context: 'Male', Options: ['Male', 'Female'] → [0]\n"
-                f"Context: 'Single', Options: ['Single', 'Married', 'Divorced'] → [0]\n"
-                f"Context: 'Bachelor Degree', Options: ['High School', 'College', 'Graduate'] → [1]\n\n"
-                f"Respond with ONLY a JSON array of indices (e.g., [0], [1, 2], or []):"
-            )
+            selection_prompt = checkbox_selection_prompt(entry.context_key, context_value, entry.checkbox_values)
             
             # Try parsing with retry logic
             max_tries = 3
