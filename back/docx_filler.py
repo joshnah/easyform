@@ -75,7 +75,7 @@ def _apply_fills_and_checkboxes(doc: Document, lines: List[str], locations, entr
                 break
 
 
-def fill_docx_with_entries(fill_entries: List[FillEntry], checkbox_entries: List[CheckboxEntry], form_path: str, context_dir: str, output_path: Optional[str] = None) -> str:
+def fill_docx_with_entries(fill_entries: List[FillEntry], checkbox_entries: List[CheckboxEntry], form_path: str, output_path: Optional[str] = None) -> str:
     """Fill a DOCX form using *precomputed* FillEntry and CheckboxEntry lists. No placeholder detection is performed."""
     doc = Document(form_path)
 
@@ -132,10 +132,6 @@ def fill_docx(keys: List[str], form_path: str, context_dir: str, output_path: Op
     """Legacy DOCX fill. Detects entries and checkboxes and delegates to fill_docx_with_entries."""
     doc = Document(form_path)
     
-    # Font resolution cache to avoid repeated lookups
-    font_cache = {}
-    cache_dir = get_fonts_cache_dir()
-    
     # Extract all lines and track locations with original font information
     lines: List[str] = []
     locations = []  # tuples for replacing: ('para', paragraph, original_font_info) or ('cell', cell, paragraph, original_font_info)
@@ -184,4 +180,4 @@ def fill_docx(keys: List[str], form_path: str, context_dir: str, output_path: Op
     checkbox_entries = detect_checkbox_entries(lines, keys)
     checkbox_entries = process_checkbox_entries(checkbox_entries, context_dir, keys)
     
-    return fill_docx_with_entries(entries, checkbox_entries, form_path, context_dir, output_path) 
+    return fill_docx_with_entries(entries, checkbox_entries, form_path, output_path) 

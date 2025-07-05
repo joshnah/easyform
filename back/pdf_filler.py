@@ -182,18 +182,11 @@ def fill_flat_pdf(keys: List[str], form_path: str, context_dir: str, output_path
     return out 
 
 
-def fill_pdf_with_entries(fill_entries: List[FillEntry], checkbox_entries: List[CheckboxEntry], form_path: str, context_dir: str, output_path: Optional[str] = None) -> str:
+def fill_pdf_with_entries(fill_entries: List[FillEntry], checkbox_entries: List[CheckboxEntry], form_path: str, output_path: Optional[str] = None) -> str:
     """Fill a PDF (interactive or flat) using pre-computed FillEntry / CheckboxEntry lists.
     Currently, checkbox_entries are accepted for compatibility but are **ignored** because PDF overlay
     logic is not yet implemented for checkboxes. Future work can extend this.
     """
-    # Try interactive form first using context from entries (if any filled values exist).
-    context_data = {}
-    for entry in fill_entries:
-        # entry.filled_lines may contain multiple lines; not ideal for AcroForm mapping.
-        # We simply skip interactive fill unless context keys map directly.
-        pass  # We'll fall back to flat fill below.
-
     return fill_flat_pdf_with_entries(fill_entries, form_path, output_path)
 
 

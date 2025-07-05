@@ -75,7 +75,6 @@ class FillDocxRequest(BaseModel):
     fill_entries: List[FillEntrySchema]
     checkbox_entries: List[CheckboxEntrySchema]
     form_path: str
-    context_dir: str
     output_path: Optional[str] = None
 
 class FillDocxResponse(BaseModel):
@@ -85,7 +84,6 @@ class FillPdfRequest(BaseModel):
     fill_entries: List[FillEntrySchema]
     checkbox_entries: List[CheckboxEntrySchema] = []  # Currently ignored but accepted for symmetry
     form_path: str
-    context_dir: str
     output_path: Optional[str] = None
 
 class FillPdfResponse(BaseModel):
@@ -267,7 +265,7 @@ def api_fill_docx(req: FillDocxRequest):
     dataclass_entries = [e.to_dataclass() for e in req.fill_entries]
     dataclass_checkboxes = [c.to_dataclass() for c in req.checkbox_entries]
     out_path = fill_docx_with_entries(
-        dataclass_entries, dataclass_checkboxes, req.form_path, req.context_dir, req.output_path
+        dataclass_entries, dataclass_checkboxes, req.form_path, req.output_path
     )
     return FillDocxResponse(output_path=out_path)
 
@@ -286,7 +284,7 @@ def api_fill_pdf(req: FillPdfRequest):
     dataclass_entries = [e.to_dataclass() for e in req.fill_entries]
     dataclass_checkboxes = [c.to_dataclass() for c in req.checkbox_entries]
     out_path = fill_pdf_with_entries(
-        dataclass_entries, dataclass_checkboxes, req.form_path, req.context_dir, req.output_path
+        dataclass_entries, dataclass_checkboxes, req.form_path, req.output_path
     )
     return FillPdfResponse(output_path=out_path)
 
