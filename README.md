@@ -31,6 +31,8 @@ Once running, visit:
 | POST | `/context/read` | Read `context_data.json` in a context directory. |
 | POST | `/context/add` | Add/update a key-value pair in `context_data.json`. |
 | POST | `/context/extract` | Run full context extraction pipeline for a dir (writes/returns `context_data.json`). |
+| POST | `/docx/fill` | Fill a DOCX form using pre-computed `FillEntry` & `CheckboxEntry` payloads (no detection on server). |
+| POST | `/pdf/fill` | Fill a PDF form (interactive or flat overlay) using pre-computed entries. |
 | GET  | `/health` | Simple health check. |
 
 ### JSON Schemas

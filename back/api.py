@@ -9,6 +9,8 @@ from .text_extraction import extract_form_text
 from .pattern_detection import detect_placeholder_patterns
 from .fill_processor import detect_fill_entries, process_fill_entries, FillEntry
 from .context_extractor import extract_context
+from .docx_filler import fill_docx_with_entries
+from .pdf_filler import fill_pdf_with_entries
 
 app = FastAPI(title="EasyForm Backend API", version="0.1.0")
 
@@ -65,6 +67,29 @@ class CheckboxEntrySchema(BaseModel):
             context_key=self.context_key,
             checked_indices=self.checked_indices,
         )
+
+class FillDocxRequest(BaseModel):
+    """Request payload for /docx/fill endpoint. All placeholder detection must have been done client-side.
+    We simply receive the pre-computed fill entries and checkbox entries along with paths.
+    """
+    fill_entries: List[FillEntrySchema]
+    checkbox_entries: List[CheckboxEntrySchema]
+    form_path: str
+    context_dir: str
+    output_path: Optional[str] = None
+
+class FillDocxResponse(BaseModel):
+    output_path: str
+
+class FillPdfRequest(BaseModel):
+    fill_entries: List[FillEntrySchema]
+    checkbox_entries: List[CheckboxEntrySchema] = []  # Currently ignored but accepted for symmetry
+    form_path: str
+    context_dir: str
+    output_path: Optional[str] = None
+
+class FillPdfResponse(BaseModel):
+    output_path: str
 
 # ---------------------------------------------------------------------------
 # Request/Response Models
@@ -224,6 +249,46 @@ def api_extract_context(req: ExtractContextRequest):
     with open(_context_path(req.context_dir), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     return ExtractContextResponse(context=data)
+
+
+@app.post(
+    "/docx/fill",
+    response_model=FillDocxResponse,
+    summary="Fill a DOCX form using pre-computed placeholder & checkbox entries",
+    description=(
+        "Takes the raw `form_path` to a DOCX template, a list of pre-processed `FillEntry` objects\n"
+        "(each with its `filled_lines` already populated) and `CheckboxEntry` objects indicating which\n"
+        "checkbox indices should be checked. No placeholder or checkbox pattern detection is executed\n"
+        "server-side — the entries must be prepared on the client. The filled document is written to\n"
+        "`output_path` (or '<form>_filled.docx' beside the original) and the absolute path is returned."
+    ),
+)
+def api_fill_docx(req: FillDocxRequest):
+    dataclass_entries = [e.to_dataclass() for e in req.fill_entries]
+    dataclass_checkboxes = [c.to_dataclass() for c in req.checkbox_entries]
+    out_path = fill_docx_with_entries(
+        dataclass_entries, dataclass_checkboxes, req.form_path, req.context_dir, req.output_path
+    )
+    return FillDocxResponse(output_path=out_path)
+
+
+@app.post(
+    "/pdf/fill",
+    response_model=FillPdfResponse,
+    summary="Fill a PDF form using pre-computed placeholder & checkbox entries",
+    description=(
+        "Similar to `/docx/fill` but for PDF files. Interactive AcroForm fields are attempted first; if the\n"
+        "PDF is flat, text overlay is used. Checkbox entries are currently ignored (no overlay support yet)\n"
+        "but accepted for forward compatibility. Output path mirrors DOCX behaviour."
+    ),
+)
+def api_fill_pdf(req: FillPdfRequest):
+    dataclass_entries = [e.to_dataclass() for e in req.fill_entries]
+    dataclass_checkboxes = [c.to_dataclass() for c in req.checkbox_entries]
+    out_path = fill_pdf_with_entries(
+        dataclass_entries, dataclass_checkboxes, req.form_path, req.context_dir, req.output_path
+    )
+    return FillPdfResponse(output_path=out_path)
 
 
 @app.get("/health")

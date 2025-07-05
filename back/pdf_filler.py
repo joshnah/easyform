@@ -13,9 +13,10 @@ from typing import List, Optional
 from pypdf import PdfReader, PdfWriter
 import fitz
 from .font_manager import get_available_font, get_fonts_cache_dir
-from .fill_processor import detect_fill_entries, process_fill_entries
+from .fill_processor import detect_fill_entries, process_fill_entries, FillEntry
 from .text_utils import sanitize_unicode_for_pdf
 from .context_extractor import extract_context
+from .checkbox_processor import CheckboxEntry
 
 
 def fill_pdf(keys: List[str], form_path: str, context_dir: str, output_path: Optional[str], placeholder_pattern) -> str:
@@ -179,3 +180,136 @@ def fill_flat_pdf(keys: List[str], form_path: str, context_dir: str, output_path
     doc.save(out, incremental=False, encryption=fitz.PDF_ENCRYPT_NONE)
     doc.close()
     return out 
+
+
+def fill_pdf_with_entries(fill_entries: List[FillEntry], checkbox_entries: List[CheckboxEntry], form_path: str, context_dir: str, output_path: Optional[str] = None) -> str:
+    """Fill a PDF (interactive or flat) using pre-computed FillEntry / CheckboxEntry lists.
+    Currently, checkbox_entries are accepted for compatibility but are **ignored** because PDF overlay
+    logic is not yet implemented for checkboxes. Future work can extend this.
+    """
+    # Try interactive form first using context from entries (if any filled values exist).
+    context_data = {}
+    for entry in fill_entries:
+        # entry.filled_lines may contain multiple lines; not ideal for AcroForm mapping.
+        # We simply skip interactive fill unless context keys map directly.
+        pass  # We'll fall back to flat fill below.
+
+    return fill_flat_pdf_with_entries(fill_entries, form_path, output_path)
+
+
+def fill_flat_pdf_with_entries(fill_entries: List[FillEntry], form_path: str, output_path: Optional[str]) -> str:
+    """Overlay filled text for a flat PDF using given entries (checkboxes ignored)."""
+    import fitz
+    cache_dir = get_fonts_cache_dir()
+    doc = fitz.open(form_path)
+
+    for page in doc:
+        font_cache = {}
+        lines_data = []
+        text_dict = page.get_text("dict")
+        for block in text_dict.get("blocks", []):
+            if block.get("type") != 0:
+                continue
+            for line in block.get("lines", []):
+                spans = line.get("spans", [])
+                if not spans:
+                    continue
+                text_line = "".join(span.get("text", "") for span in spans)
+                xs = [b for span in spans for b in (span["bbox"][0], span["bbox"][2])]
+                ys = [b for span in spans for b in (span["bbox"][1], span["bbox"][3])]
+                rect = (min(xs), min(ys), max(xs), max(ys))
+                lines_data.append({"text": text_line, "spans": spans, "rect": rect})
+
+        lines = [ld["text"] for ld in lines_data]
+
+        # Redact & overlay using provided filled_lines
+        for entry in fill_entries:
+            group = entry.lines.split("\n")
+            filled = entry.filled_lines.split("\n")
+            n = len(group)
+            for i in range(len(lines) - n + 1):
+                if lines[i:i+n] == group:
+                    # redact
+                    for j in range(n):
+                        rd_rect = fitz.Rect(lines_data[i+j]["rect"])
+                        page.add_redact_annot(rd_rect, fill=(1,1,1))
+                    break
+        page.apply_redactions()
+
+        for entry in fill_entries:
+            group = entry.lines.split("\n")
+            filled = entry.filled_lines.split("\n")
+            n = len(group)
+            for i in range(len(lines) - n + 1):
+                if lines[i:i+n] == group:
+                    for j in range(n):
+                        span0 = lines_data[i+j]["spans"][0]
+                        x = span0["bbox"][0]
+                        y = span0["bbox"][3]
+                        fontsize = span0.get("size", 12)
+                        sanitized_text = sanitize_unicode_for_pdf(filled[j])
+                        original_font_name = span0.get("font", "")
+                        if original_font_name:
+                            original_font_name = re.sub(r'^[A-Z]{6}\+', '', original_font_name)
+                        if original_font_name and original_font_name not in font_cache:
+                            font_name, font_file_path = get_available_font(original_font_name, cache_dir)
+                            font_cache[original_font_name] = (font_name, font_file_path)
+                        elif original_font_name:
+                            font_name, font_file_path = font_cache[original_font_name]
+                        else:
+                            font_name, font_file_path = "helv", None
+                        text_inserted = False
+                        if font_file_path and os.path.exists(font_file_path):
+                            try:
+                                fontbuffer = open(font_file_path, "rb").read()
+                                font = fitz.Font(fontbuffer=fontbuffer)
+                                page.insert_text((x, y), sanitized_text, font=font, fontsize=fontsize, color=(0,0,0))
+                                text_inserted = True
+                            except Exception:
+                                pass
+                        if not text_inserted:
+                            try:
+                                page.insert_text((x,y), sanitized_text, fontname=font_name, fontsize=fontsize, color=(0,0,0))
+                                text_inserted = True
+                            except Exception:
+                                pass
+                        if not text_inserted:
+                            try:
+                                page.insert_text((x,y), sanitized_text, fontname="helv", fontsize=fontsize, color=(0,0,0))
+                            except Exception:
+                                pass
+                    break
+
+    out = output_path or form_path.replace('.pdf', '_filled.pdf')
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    if os.path.abspath(out) == os.path.abspath(form_path):
+        out = form_path.replace('.pdf', '_filled.pdf')
+    doc.save(out, incremental=False, encryption=fitz.PDF_ENCRYPT_NONE)
+    doc.close()
+    return out
+
+
+# Refactor legacy fill_pdf to keep compatibility but delegate
+
+def fill_pdf(keys: List[str], form_path: str, context_dir: str, output_path: Optional[str], placeholder_pattern):
+    """Legacy PDF fill: detects entries then delegates to new fill_pdf_with_entries."""
+    # Build lines for detection
+    import fitz
+    doc = fitz.open(form_path)
+    lines: List[str] = []
+    for page in doc:
+        text_dict = page.get_text("dict")
+        for block in text_dict.get("blocks", []):
+            if block.get("type") != 0:
+                continue
+            for line in block.get("lines", []):
+                spans = line.get("spans", [])
+                text_line = "".join(span.get("text", "") for span in spans)
+                lines.append(text_line)
+    doc.close()
+
+    entries = detect_fill_entries(lines, keys, placeholder_pattern)
+    entries = process_fill_entries(entries, context_dir, placeholder_pattern)
+
+    # PDF checkbox not supported; pass empty list.
+    return fill_pdf_with_entries(entries, [], form_path, context_dir, output_path) 
