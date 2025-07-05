@@ -21,7 +21,7 @@ def main():
     parser.add_argument('--context', type=str, default=None, help='Path to context JSON file for filling form.')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose logging.')
     parser.add_argument('--test-api', action='store_true', help='Test OpenAI API connectivity.')
-    parser.add_argument('--provider', choices=['openai', 'groq'], default=None, help='Specify LLM provider to use (openai or groq).')
+    parser.add_argument('--provider', choices=['openai', 'groq', 'anythingllm'], default=None, help='Specify LLM provider to use (openai or groq).')
     parser.add_argument('--printFilled', action='store_true', help='After filling a form, print the plain text of the filled document to stdout for inspection.')
     args = parser.parse_args()
 
