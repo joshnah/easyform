@@ -144,3 +144,24 @@ uvicorn back.api:app --reload
 ```
 
 and navigate to `http://127.0.0.1:8000/docs` for the interactive swagger UI.
+
+## Quick API Test Run
+```bash
+# 1) Ensure the FastAPI server is running (see instructions above)
+uvicorn back.api:app --reload &  # or python -m back.server
+
+# 2) In another terminal (or after the server is up) execute:
+python test_api_process.py \
+  --form ./form_pdf_long.pdf \
+  --contextDir ./test_context
+# Optional flags:
+#   --base http://localhost:8000   # non-default host
+#   --out  ./filled_output.pdf     # custom output path
+```
+
+The script walks through the entire API pipeline:
+1. Health-check
+2. Context extraction
+3. Text extraction & pattern detection
+4. Fill-entry & checkbox detection + processing
+5. Calls the appropriate `/docx/fill` or `/pdf/fill` endpoint and prints the resulting output path.
