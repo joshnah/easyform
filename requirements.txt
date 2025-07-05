@@ -1,0 +1,10 @@
+python-docx
+pypdf
+pytesseract
+Pillow
+openai
+groq
+pdfplumber
+pdf2image
+requests
+docling 
