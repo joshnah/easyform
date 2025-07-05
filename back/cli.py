@@ -126,7 +126,7 @@ def main():
             json.dump(context_data, f, ensure_ascii=False, indent=4)
         output_path = args.output or args.form.replace('.docx', '_filled.docx')
         keys = list(context_data.keys())
-        fill_in_form(keys, args.form, context_dir, output_path)
+        fill_in_form(keys, args.form, context_dir, args.provider, output_path)
         logging.info(f"Filled form saved to {output_path}")
 
         # Optionally print the filled document's text content for quick inspection

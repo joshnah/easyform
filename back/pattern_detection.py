@@ -10,13 +10,17 @@ import json
 import logging
 from .llm_client import query_gpt
 from .prompts import placeholder_detection_prompt
+from typing import Literal
 
 # Default fallback pattern - will be replaced by dynamic detection
 DEFAULT_PLACEHOLDER_PATTERN = re.compile(r'_+')
 CHECKBOX_PATTERN = re.compile(r'[\[\(][\sXx]?[\]\)]|[☐☑☒□■]')
 
 
-def detect_placeholder_patterns(form_text: str) -> re.Pattern:
+def detect_placeholder_patterns(
+        form_text: str,
+        provider: Literal['openai', 'groq', 'anythingllm']
+    ) -> re.Pattern:
     """
     Use LLM to detect actual placeholder strings in the form text and return a combined regex pattern.
     Falls back to default underscore pattern if detection fails.
@@ -29,7 +33,7 @@ def detect_placeholder_patterns(form_text: str) -> re.Pattern:
     
     for try_count in range(max_tries):
         # response = query_gpt(prompt)
-        response = query_gpt(prompt=prompt, provider="groq")
+        response = query_gpt(prompt=prompt, provider=provider)
         
         # Clean and parse response
         clean = response.strip()

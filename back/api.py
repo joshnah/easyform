@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Literal
 import re
 import os
 import json
@@ -101,6 +101,8 @@ class ExtractFormTextResponse(BaseModel):
 
 class DetectPatternRequest(BaseModel):
     text: str
+    provider: Literal["openai", "groq", "anythingllm"]
+
 
 class DetectPatternResponse(BaseModel):
     pattern: str  # regex pattern string
@@ -175,7 +177,7 @@ def api_extract_form_text(req: ExtractFormTextRequest):
 
 @app.post("/pattern/detect", response_model=DetectPatternResponse)
 def api_detect_pattern(req: DetectPatternRequest):
-    pattern = detect_placeholder_patterns(req.text)
+    pattern = detect_placeholder_patterns(req.text, req.provider)
     return DetectPatternResponse(pattern=pattern.pattern)
 
 
