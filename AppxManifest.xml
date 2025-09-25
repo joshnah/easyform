@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+         IgnorableNamespaces="uap rescap desktop desktop4">
+<Identity
+    Name="EasyForm.EasyForm"
+    Publisher="CN=YOUR_PUBLISHER_ID_HERE"
+    Version="1.0.0.0" />
+  <Properties>
+    <DisplayName>EasyForm</DisplayName>
+    <PublisherDisplayName>EasyForm</PublisherDisplayName>
+    <Logo>logo.jpg</Logo>
+    <Description>LLM-powered form filler using on-device user documents</Description>
+  </Properties>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+  <Applications>
+    <Application Id="EasyForm"
+                 Executable="EasyForm.exe"
+                 EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="EasyForm"
+                          Description="LLM-powered form filler using on-device user documents"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="logo.jpg"
+                          Square44x44Logo="logo.jpg">
+        <uap:DefaultTile/>
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="landscape"/>
+        </uap:InitialRotationPreference>
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+</Package>

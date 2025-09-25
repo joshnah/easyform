@@ -1,0 +1,14 @@
+python-docx
+pypdf
+pytesseract
+Pillow
+PyMuPDF
+openai
+groq
+pdfplumber
+pdf2image
+requests
+docling
+easyocr
+fastapi
+uvicorn
