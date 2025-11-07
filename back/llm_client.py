@@ -13,7 +13,7 @@ import yaml
 
 def get_appdata_dir():
     appdata = os.getenv("APPDATA") or os.path.expanduser("~")
-    app_dir = os.path.join(appdata, "FormFillerAI")
+    app_dir = os.path.join(appdata, "EasyForm")
     if not os.path.exists(app_dir):
         os.makedirs(app_dir)
     return app_dir

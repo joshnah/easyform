@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Import here to avoid side-effects if the module is imported elsewhere.
     # Handle both relative and absolute imports for PyInstaller compatibility
     try:
-        from .api import app  # noqa: WPS433 – internal import for runtime
+        from back.api import app  # noqa: WPS433 – internal import for runtime
     except (ImportError, ValueError):
         try:
             from back.api import app
