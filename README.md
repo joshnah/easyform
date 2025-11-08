@@ -17,7 +17,7 @@ npm install
 
 TODO: Download edge AI model
 
-## Getting started
+## Getting started on local
 1. Run backend
 
 ```bash
@@ -34,15 +34,16 @@ Once running, you can visit the API documentation at:
 * ReDoc:      http://localhost:8000/redoc  
 * Raw OpenAPI JSON: http://localhost:8000/openapi.json
 
-2. Run frontend app
+2. Run frontend app in another terminal
 
 ```bash
 cd front
 npm run start:dev
 ```
-The app will appear on the screen for you
+The app will appear on the screen for you. Choose a provider and provide API key on the screen. Try to start with an online provider to understand the workflow first.
 
-5. Demo documents
+
+3. Demo documents
 We have also prepare some mock documents:
 - `./back/test_form.pdf`: a mock pdf form file
 - `./back/test_context`: a mock context directory
@@ -51,7 +52,7 @@ After processing, a `context_data.json` file will be generated in your context f
 
 ## Quick API Test Run
 ```bash
-# 1) Ensure the FastAPI server is running (see instructions above)
+# 1) Ensure the FastAPI server is running
 python -m back.server
 
 # 2) In another terminal (or after the server is up) execute:
@@ -68,6 +69,8 @@ The script walks through the entire API pipeline:
 4. Fill-entry & checkbox detection + processing
 5. Calls the appropriate `/docx/fill` or `/pdf/fill` endpoint and prints the resulting output path.
 
-## Packaging Window
-See script build_with_model.bat
+## Packaging on window x64
+See [package_with_model.bat](package_with_model.bat) for more info
 
+## Local installation of package
+After completing the packaging process, an `EasyForm.msix` file will be generated. To install it locally, you must sign the package. Refer to the [self_signing.ps1](self_signing.ps1) script for detailed instructions on self-signing the package.
