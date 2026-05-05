@@ -19,7 +19,8 @@
     "test:watch": "vitest watch",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "gen:api-types": "openapi-typescript http://localhost:8000/openapi.json -o src/types/backend.gen.d.ts"
   },
   "author": "joshnah <tdat.phan201@gmail.com>",
   "license": "MIT",
@@ -58,6 +59,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
     "tailwindcss": "^4.1.7",
+    "openapi-typescript": "^7.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.0",

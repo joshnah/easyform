@@ -1,6 +1,7 @@
 """Search a context directory for values matching field requirements."""
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -13,7 +14,9 @@ from back2.utils.json_parser import parse_json_response
 from back2.utils.text_splitter import split_text
 from back2.utils.tokenization import count_tokens
 
-CONTEXT_WINDOW = 4090
+logger = logging.getLogger(__name__)
+
+DEFAULT_CONTEXT_WINDOW = 4090
 TOKENS_FOR_OUTPUT = 400  # reserved for the model's reply
 BATCH_SIZE = 10  # field keys per LLM call
 SUPPORTED_EXTS = {".txt", ".md", ".json", ".pdf", ".docx"}
@@ -83,7 +86,7 @@ class ContextSearcher:
             try:
                 text = extract_text_from_file(path)
             except Exception as e:
-                print(f"Skipping {path}: {e}")
+                logger.warning("Skipping %s: %s", path, e)
                 continue
             if text:
                 blocks.append(f"\n\n=== {os.path.basename(path)} ===\n{text}")
@@ -108,7 +111,7 @@ class ContextSearcher:
                     prompt, max_tokens=1000, temperature=0.1
                 ).strip()
             except Exception as e:
-                print(f"LLM query failed in context search: {e}")
+                logger.warning("LLM query failed in context search: %s", e)
                 continue
 
             parsed = parse_json_response(response)
@@ -147,6 +150,9 @@ class ContextSearcher:
                     value = None
             results[key] = value
 
+    def _context_window(self) -> int:
+        return getattr(self._llm, "context_window", DEFAULT_CONTEXT_WINDOW)
+
     def _process_and_split_context(
         self, all_text: List[str], placeholder_prompt: str
     ) -> List[str]:
@@ -155,8 +161,9 @@ class ContextSearcher:
         prompt overhead and reserved output), then greedily merge the resulting
         sub-chunks. Token counts are computed once per chunk and reused.
         """
+        context_window = self._context_window()
         prompt_tokens = count_tokens(placeholder_prompt)
-        budget_tokens = CONTEXT_WINDOW - prompt_tokens - TOKENS_FOR_OUTPUT
+        budget_tokens = context_window - prompt_tokens - TOKENS_FOR_OUTPUT
         budget_chars = max(1, budget_tokens * CHARS_PER_TOKEN)
 
         chunk_token_counts: List[Tuple[str, int]] = []

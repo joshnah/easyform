@@ -3,6 +3,7 @@ import os
 import time
 import logging
 
+from back2.utils.api_keys import get_active_api_key
 from .base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,10 @@ DEFAULT_MIN_INTERVAL = 2.0  # seconds between requests (simple rate limit)
 class GroqProvider(LLMProvider):
     """Groq provider with simple per-instance rate limiting and retry."""
 
+    # llama-3.1-8b-instant accepts 128k tokens. Cap at 8k as a safe headroom
+    # against the free tier's per-minute token budget.
+    context_window: int = 8_000
+
     def __init__(
         self,
         model: Optional[str] = None,
@@ -26,7 +31,13 @@ class GroqProvider(LLMProvider):
         **kwargs: Any,
     ):
         super().__init__(model)
-        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        # Resolve the key in this order: explicit kwarg → env var →
+        # ~/EasyForm/api_keys.json (written by the Electron API Keys modal).
+        self.api_key = (
+            api_key
+            or os.getenv("GROQ_API_KEY")
+            or get_active_api_key("groq")
+        )
         self._client = None
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor

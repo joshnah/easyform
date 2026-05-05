@@ -18,4 +18,8 @@ if getattr(sys, "frozen", False):
 if __name__ == "__main__":
     from back2.api import app
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    # 127.0.0.1 by default — only the same machine can reach the API. Override
+    # via EASYFORM_HOST when you need LAN access (e.g. dev rig + tablet).
+    host = os.environ.get("EASYFORM_HOST", "127.0.0.1")
+    port = int(os.environ.get("EASYFORM_PORT", "8000"))
+    uvicorn.run(app, host=host, port=port, reload=False)

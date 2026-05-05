@@ -1,11 +1,14 @@
 """Base form-filler: replaces placeholders in document text and saves the result."""
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import List, Optional
 
 from back2.schemas import FieldRequirement
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_ext(path: str, ext: str) -> str:
@@ -89,13 +92,16 @@ class BaseFiller:
         raise NotImplementedError("Subclasses must implement _save")
 
     def save_filled_document(
-        self, fill_result: FillResult, output_path: str, extension: str = "txt"
+        self, fill_result: FillResult, output_path: str
     ) -> None:
         """Write the filled document plus a `<output>.metadata.json` sidecar."""
         if not isinstance(fill_result, FillResult):
             raise TypeError("save_filled_document expects a FillResult instance")
+        if not output_path:
+            raise ValueError(
+                "save_filled_document requires an explicit output_path"
+            )
 
-        output_path = output_path or f"output.{extension}"
         self._save(fill_result, output_path)
 
         metadata_path = output_path + ".metadata.json"
@@ -110,4 +116,6 @@ class BaseFiller:
             with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Failed to write metadata file {metadata_path}: {e}")
+            logger.warning(
+                "Failed to write metadata file %s: %s", metadata_path, e
+            )

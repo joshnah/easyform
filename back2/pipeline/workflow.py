@@ -45,7 +45,7 @@ class DocumentFirstWorkflow:
             output_path = str(
                 input_path.parent / f"{input_path.stem}_filled{input_path.suffix}"
             )
-        form_filler.save_filled_document(fill_result, output_path, extension=ext)
+        form_filler.save_filled_document(fill_result, output_path)
 
         return self._build_summary(
             document_path=document_path,

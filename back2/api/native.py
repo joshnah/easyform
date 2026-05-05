@@ -125,7 +125,6 @@ async def fill_document(request: FillDocumentRequest):
         form_filler.save_filled_document(
             fill_result=fill_result,
             output_path=output_path,
-            extension=extension,
         )
 
     return {

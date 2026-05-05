@@ -3,6 +3,7 @@ import time
 import logging
 from typing import Optional, Any
 
+from back2.utils.api_keys import get_active_api_key
 from .base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -10,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 class OpenAIProvider(LLMProvider):
     """OpenAI provider implementation."""
+
+    # gpt-4o-mini / gpt-4.1-mini both ship 128k context. Stay well under it
+    # so any token-count slop never trips a 400.
+    context_window: int = 32_000
 
     def __init__(
         self,
@@ -20,7 +25,13 @@ class OpenAIProvider(LLMProvider):
         **kwargs
     ):
         super().__init__(model or "gpt-4o-mini")
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        # Resolve the key in this order: explicit kwarg → env var →
+        # ~/EasyForm/api_keys.json (written by the Electron API Keys modal).
+        self.api_key = (
+            api_key
+            or os.getenv("OPENAI_API_KEY")
+            or get_active_api_key("openai")
+        )
         self._client = None
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
 import ChangesList from "@/components/ChangesList";
 import { FilePreviewCard } from "@/components/FilePreviewCard";
@@ -97,6 +97,10 @@ export default function FormFillingAI() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const [isExtracting, setIsExtracting] = useState(false);
+  // Debounce re-fills so editing several lines in quick succession only
+  // produces one /pdf/fill round-trip after the user pauses.
+  const refillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const REFILL_DEBOUNCE_MS = 500;
   const loadContextData = async () => {
     if (!contextDir) {
       return;
@@ -194,23 +198,42 @@ export default function FormFillingAI() {
       // Update the fillEntries state
       setFillEntries(updatedFillEntries);
 
-      try {
-        // Re-fill the form with updated entries
-        console.log("Re-filling form with updated entries...");
-        await fillForm(
-          uploadedFile!,
-          updatedFillEntries,
-          checkboxEntries,
-          outputPath,
-        );
-        console.log("Form re-filled successfully");
-      } catch (error) {
-        console.error("Error re-filling form:", error);
+      // Debounce: cancel any pending re-fill, schedule a fresh one. Capture
+      // the latest entries/checkbox/output path in the timer's closure.
+      if (refillTimerRef.current) {
+        clearTimeout(refillTimerRef.current);
       }
+      const formPath = uploadedFile!;
+      const entriesSnapshot = updatedFillEntries;
+      const checkboxSnapshot = checkboxEntries;
+      const outputSnapshot = outputPath;
+      refillTimerRef.current = setTimeout(async () => {
+        try {
+          console.log("Re-filling form with updated entries...");
+          await fillForm(
+            formPath,
+            entriesSnapshot,
+            checkboxSnapshot,
+            outputSnapshot,
+          );
+          console.log("Form re-filled successfully");
+        } catch (error) {
+          console.error("Error re-filling form:", error);
+        }
+      }, REFILL_DEBOUNCE_MS);
     } else {
       console.error("Could not find change with ID", changeId);
     }
   };
+
+  // Clear the debounce timer if the component unmounts mid-debounce.
+  useEffect(() => {
+    return () => {
+      if (refillTimerRef.current) {
+        clearTimeout(refillTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (fillEntries) {
@@ -252,11 +275,12 @@ export default function FormFillingAI() {
       console.error("No form chosen for processing");
       return;
     }
-    if (isPdfUploaded) {
-      setOutputPath(uploadedFile.replace(/\.pdf$/, "_filled.pdf"));
-    } else {
-      setOutputPath(uploadedFile.replace(/\.docx$/, "_filled.docx"));
-    }
+    // Compute the new output path locally — `setOutputPath` is async and the
+    // closure below would otherwise capture the stale value (initially "").
+    const newOutputPath = isPdfUploaded
+      ? uploadedFile.replace(/\.pdf$/i, "_filled.pdf")
+      : uploadedFile.replace(/\.docx$/i, "_filled.docx");
+    setOutputPath(newOutputPath);
 
     try {
       setProcessingStep(ProcessStep.AnalyzingForm);
@@ -314,8 +338,8 @@ export default function FormFillingAI() {
       setProcessingStep(ProcessStep.FillingFormFields);
       console.log("Filling form with processed entries...");
 
-      console.log("Output path:", `${outputPath}`);
-      await fillForm(uploadedFile, filledEntries, [], outputPath);
+      console.log("Output path:", newOutputPath);
+      await fillForm(uploadedFile, filledEntries, [], newOutputPath);
       console.log("Form filling complete!");
       setCurrentStep(TabStep.ReviewEdit);
     } catch (error) {

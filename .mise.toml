@@ -22,7 +22,7 @@ run = "uv pip freeze > requirements.txt"
 description = "Start backend server"
 alias = "sb"
 dir = "{{config_root}}"
-run = "uvicorn back2.api:app --host 0.0.0.0 --port 8000 --reload"
+run = "uvicorn back2.api:app --host 127.0.0.1 --port 8000 --reload"
 
 [tasks.start-frontend]
 description = "Start backend server"

@@ -1,6 +1,9 @@
+import logging
 import os
 
 from back2.fillers.base import BaseFiller, FillResult, ensure_ext
+
+logger = logging.getLogger(__name__)
 
 # Page layout constants (approx A4 in PDF points).
 PAGE_WIDTH = 595
@@ -37,10 +40,18 @@ class PdfFiller(BaseFiller):
 
 
 def _insert_line(page, x: float, y: float, text: str) -> None:
-    """Try the default font size, then a fallback, then silently skip the line."""
+    """Try the default font size, then a fallback, then drop the line.
+
+    Dropping is logged at WARNING so a silent text loss is never invisible.
+    """
+    last_exc: Exception | None = None
     for size in (DEFAULT_FONT_SIZE, FONT_FALLBACK_SIZE):
         try:
             page.insert_text((x, y), text, fontsize=size, color=(0, 0, 0))
             return
-        except Exception:
+        except Exception as e:
+            last_exc = e
             continue
+    logger.warning(
+        "PdfFiller dropped line %r at (%s, %s): %s", text[:80], x, y, last_exc
+    )

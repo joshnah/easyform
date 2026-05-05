@@ -1,5 +1,6 @@
 """Analyze a document to identify fillable fields and their requirements."""
 
+import logging
 import re
 from typing import Dict, List, Optional, Tuple
 
@@ -11,7 +12,10 @@ from back2.schemas import FieldRequirement
 from back2.utils.json_parser import parse_json_response
 from back2.utils.tokenization import count_tokens
 
-CONTEXT_WINDOW = 4090
+logger = logging.getLogger(__name__)
+
+# Default cap; real value comes from `self._llm.context_window` per call.
+DEFAULT_CONTEXT_WINDOW = 4090
 PROMPT_OVERHEAD = 128
 TOKENS_PER_FIELD_OUTPUT = 10
 SURROUNDING_LINES = 3  # lines before/after each placeholder line for context
@@ -41,7 +45,7 @@ class DocumentAnalyzer:
         found_fields = self._find_placeholder_fields(
             lines, pattern_regex, placeholder_pattern
         )
-        batches = self._batch_fields_for_llm(found_fields)
+        batches = self._batch_fields_for_llm(found_fields, self._context_window())
 
         field_requirements: List[FieldRequirement] = []
         for batch in batches:
@@ -84,9 +88,13 @@ class DocumentAnalyzer:
                 )
         return fields
 
+    def _context_window(self) -> int:
+        return getattr(self._llm, "context_window", DEFAULT_CONTEXT_WINDOW)
+
     @staticmethod
     def _batch_fields_for_llm(
         found_fields: List[FieldRequirement],
+        context_window: int,
     ) -> List[List[FieldRequirement]]:
         """
         Greedy-pack fields into batches that fit the model context window.
@@ -95,7 +103,7 @@ class DocumentAnalyzer:
         if not found_fields:
             return []
 
-        per_field_cap = CONTEXT_WINDOW - PROMPT_OVERHEAD - TOKENS_PER_FIELD_OUTPUT
+        per_field_cap = context_window - PROMPT_OVERHEAD - TOKENS_PER_FIELD_OUTPUT
 
         sized: List[Tuple[FieldRequirement, int]] = []
         for f in found_fields:
@@ -104,7 +112,10 @@ class DocumentAnalyzer:
             if count <= per_field_cap:
                 sized.append((f, count))
             else:
-                print(f"Skipping {f.field_id}: token count {count} exceeds cap {per_field_cap}")
+                logger.warning(
+                    "Skipping %s: token count %d exceeds cap %d",
+                    f.field_id, count, per_field_cap,
+                )
 
         batches: List[List[FieldRequirement]] = []
         current: List[FieldRequirement] = []
@@ -112,7 +123,7 @@ class DocumentAnalyzer:
         for f, count in sized:
             prospective = len(current) + 1
             allowance = (
-                CONTEXT_WINDOW - PROMPT_OVERHEAD - TOKENS_PER_FIELD_OUTPUT * prospective
+                context_window - PROMPT_OVERHEAD - TOKENS_PER_FIELD_OUTPUT * prospective
             )
             if current and current_tokens + count > allowance:
                 batches.append(current)
@@ -159,7 +170,7 @@ class DocumentAnalyzer:
         try:
             raw = self._llm.query_gpt(prompt, max_tokens=1000, temperature=0.1).strip()
         except Exception as e:
-            print(f"LLM query failed in _infer_types_and_keys: {e}")
+            logger.warning("LLM query failed in _infer_types_and_keys: %s", e)
             return ["other"] * len(fields), [None] * len(fields)
 
         parsed = parse_json_response(raw)
