@@ -2,7 +2,7 @@
 
 echo ---------------
 echo Building backend executable
-pyinstaller back/server.py --clean --noconfirm --onefile --distpath ./backend --collect-all easyocr --collect-all torch --collect-all torchvision --collect-all docling --collect-all docling_core --collect-all docling_parse --collect-all docling_ibm_models --collect-all pymupdf
+pyinstaller back2/server.py --clean --noconfirm --onefile --distpath ./backend --collect-all easyocr --collect-all torch --collect-all torchvision --collect-all docling --collect-all docling_core --collect-all docling_parse --collect-all docling_ibm_models --collect-all pymupdf --collect-all transformers --add-data "back2/tokenizer.json;back2" --add-data "back2/config.yaml;back2"
 
 echo ---------------
 echo Copying model files...

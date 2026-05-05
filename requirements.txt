@@ -12,3 +12,6 @@ docling
 easyocr
 fastapi
 uvicorn
+transformers
+langchain
+pyyaml

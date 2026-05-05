@@ -1,0 +1,18 @@
+{
+  "first_name": "Amelia",
+  "last_name": "Quest",
+  "email": "# amelia.quest@email.ut",
+  "phone": "+123 456 7890",
+  "alternate_phone": null,
+  "street_address": null,
+  "city": "Utopia City",
+  "state": "Utopia",
+  "postal_code": null,
+  "country": null,
+  "date": "July 2025",
+  "null": null,
+  "username": "amelia.quest@email.ut",
+  "password": null,
+  "confirm_password": null,
+  "security_question": null
+}
