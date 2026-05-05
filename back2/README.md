@@ -1,117 +1,101 @@
-# Back2 - Document-First Form Filling Workflow
+# back2
 
-> **Canonical docs are in [docs/back2/](../docs/back2/)** — read those for architecture, API reference, providers, configuration, migration plan, and troubleshooting. This file is kept here for proximity to the code.
+> **Canonical docs are in [docs/back2/](../docs/back2/)** — start with [docs/back2/README.md](../docs/back2/README.md) for the doc map, [architecture.md](../docs/back2/architecture.md) for the deep-dive, and [api-reference.md](../docs/back2/api-reference.md) for every endpoint. This file is kept next to the code as a quick orientation.
 
-This directory contains a modified backend workflow that follows a **document-first approach** instead of the context-first approach used in the original `back` folder.
+A FastAPI backend that fills PDF / DOCX / TXT forms by (1) analyzing the document for placeholders, (2) searching a context directory for the values, and (3) writing the filled document back. Runs on port 8000.
 
-## Workflow Comparison
-
-### Original Workflow (back/)
-1. Extract context from context directory first
-2. Try to fill the document with available context
-3. Limited understanding of what the document actually needs
-
-### New Workflow (back2/)
-1. **Analyze document** to understand what fields need to be filled
-2. **Search context directory** for the specific information required
-3. **Fill document** with found information
-4. Save all discovered information to `context_data.json` for future use
-
-## Key Features
-
-- **Document Analysis**: Identifies all fillable fields and their types
-- **Context Search**: Searches for specific information based on document requirements
-- **Smart Mapping**: Maps document fields to context keys using LLM analysis
-- **Persistent Context**: Saves discovered information for future use
-- **Comprehensive Logging**: Detailed temporary files for debugging
-- **API Integration**: FastAPI server for programmatic access
-
-## File Structure
+## Layout
 
 ```
 back2/
-├── __init__.py              # Package initialization
-├── document_analyzer.py     # Document analysis and field detection
-├── context_searcher.py      # Context directory search
-├── form_filler.py          # Document filling logic
-├── workflow.py             # Main workflow orchestrator
-├── api.py                  # FastAPI server
-├── cli.py                  # Command-line interface
-├── test_api_process.py     # API testing script
-├── llm_client.py           # LLM client (copied from back)
-├── text_extraction.py     # Text extraction utilities
-├── pattern_detection.py   # Placeholder pattern detection
-└── prompts.py             # LLM prompts
+├── server.py              # uvicorn launcher (port 8000)
+├── cli.py                 # CLI: pipeline mode or `--server`
+├── schemas.py             # FieldRequirement dataclass
+├── config.json            # AnythingLLM config (sample placeholders)
+├── tokenizer.json         # HuggingFace tokenizer (optional, for token budgeting)
+│
+├── api/                   # FastAPI app
+│   ├── __init__.py            # builds app, applies CORS, mounts routers
+│   ├── native.py              # native (document-first) endpoints
+│   ├── compat.py              # legacy compat endpoints (delegate to back/)
+│   └── context_store.py       # context_data.json read/write helpers
+│
+├── pipeline/              # phase orchestration
+│   ├── analyzer.py            # phase 1: detect fields, infer types/keys
+│   ├── searcher.py            # phase 2: search context for values
+│   ├── workflow.py            # 3-phase orchestrator + main_workflow
+│   └── prompts.py             # LLM prompts
+│
+├── extraction/            # read documents, detect placeholder patterns
+│   ├── text.py                # PDF / DOCX / TXT / MD / JSON → text
+│   └── patterns.py            # pick best placeholder regex
+│
+├── fillers/               # write filled documents
+│   ├── base.py                # BaseFiller, FillResult, ensure_ext
+│   ├── txt.py                 # TxtFiller
+│   ├── docx.py                # DocxFiller
+│   └── pdf.py                 # PdfFiller
+│
+├── providers/             # LLM provider abstraction
+│   ├── base.py                # LLMProvider ABC
+│   ├── openai.py              # OpenAIProvider
+│   ├── groq.py                # GroqProvider
+│   ├── anythingllm.py         # AnythingLLMProvider
+│   └── local.py               # LocalProvider (Genie .exe, Windows)
+│
+└── utils/                 # pure utilities
+    ├── paths.py               # resource resolver (PyInstaller-aware)
+    ├── tokenization.py        # count_tokens with char-fallback
+    ├── text_splitter.py       # recursive char splitter (langchain-free)
+    └── json_parser.py         # robust LLM-response JSON parser
 ```
 
-## Usage
-
-### Command Line Interface
+## Quickstart
 
 ```bash
-# Basic usage
-python -m back2.cli --document form.pdf --context-dir ./context
+# Install (base deps; add `requirements-extras.txt` for the heavy /context/extract path)
+pip install -r requirements.txt
 
-# With specific output and provider
-python -m back2.cli --document form.pdf --context-dir ./context --output filled.pdf --provider openai
+# Run on port 8000
+mise run sb                              # uvicorn back2.api:app --reload --port 8000
+# or
+python -m back2.server                   # no reload
+# or
+python -m back2.cli --server --port 8000 # back2's own CLI
 
-# Run API server
-python -m back2.cli --server --port 8001
+# Smoke check
+curl :8000/health                        # {"status":"ok","workflow":"document-first"}
+open http://localhost:8000/docs          # Swagger UI
+
+# Run the full pipeline from the CLI
+python -m back2.cli --document form.pdf --context-dir ./context --provider groq
 ```
 
-### API Server
-
-```bash
-# Start server
-python -m back2.api
-
-# Or via CLI
-python -m back2.cli --server
-```
-
-### Programmatic Usage
+## Programmatic use
 
 ```python
-from back2.workflow import main_workflow
+from back2.pipeline import main_workflow
 
 result = main_workflow(
     document_path="form.pdf",
     context_dir="./context",
     output_path="filled.pdf",
-    provider="groq"
+    provider="groq",
 )
 ```
 
-## API Endpoints
+## Endpoint surface (summary)
 
-- `GET /health` - Health check
-- `POST /document/analyze` - Analyze document structure
-- `POST /context/search` - Search context directory
-- `POST /process` - Complete workflow
-- `GET /document/info` - Get document information
-- `GET /context/list` - List context files
+Native (document-first):
 
-## Testing
+- `GET /health`, `GET /providers`, `GET /document/info`, `GET /context/list`
+- `POST /document/analyze`, `POST /context/search`, `POST /document/fill`, `POST /process`
 
-```bash
-# Test the API workflow
-python back2/test_api_process.py --form form.pdf --contextDir ./context --provider groq
-```
+Compat (legacy frontend):
 
-## Dependencies
+- `POST /form/text`, `POST /pattern/detect`
+- `POST /fill-entries/{detect,process}`, `POST /checkbox-entries/{detect,process}`
+- `POST /context/{read,add,update,delete,extract}`
+- `POST /docx/fill`, `POST /pdf/fill`
 
-Same as the original `back` folder:
-- PyMuPDF (for PDF processing)
-- python-docx (for DOCX processing)
-- FastAPI (for API server)
-- Requests (for API calls)
-- OpenAI/Groq/AnythingLLM clients
-
-## Advantages of Document-First Approach
-
-1. **Better Understanding**: Analyzes what the document actually needs
-2. **Targeted Search**: Only searches for information that's actually required
-3. **Higher Accuracy**: Matches fields based on context and meaning
-4. **Efficiency**: Avoids processing unnecessary context information
-5. **Flexibility**: Can handle documents with varied field types and layouts
-6. **Debugging**: Comprehensive temporary files for troubleshooting
+Compat handlers lazily delegate to the legacy `back/` package so PDF overlay and OCR-based context extraction keep working unchanged. See [docs/back2/migration.md](../docs/back2/migration.md) for the cutover plan.

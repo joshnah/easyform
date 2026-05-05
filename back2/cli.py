@@ -7,7 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from back2.workflow import main_workflow
+from back2.pipeline import main_workflow
 
 
 def main():

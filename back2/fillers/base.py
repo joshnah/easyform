@@ -8,6 +8,13 @@ from typing import List, Optional
 from back2.schemas import FieldRequirement
 
 
+def ensure_ext(path: str, ext: str) -> str:
+    """Return `path` with `.<ext>` suffix, adding it if missing."""
+    if not path.lower().endswith(f".{ext}"):
+        return f"{path}.{ext}"
+    return path
+
+
 @dataclass
 class FillResult:
     """Result of filling a document."""

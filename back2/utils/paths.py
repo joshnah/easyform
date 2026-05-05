@@ -10,20 +10,20 @@ from pathlib import Path
 
 
 def _bundle_root() -> Path:
-    """Return the directory the code lives in.
+    """Return the back2 package directory.
 
-    Inside a PyInstaller bundle that's `sys._MEIPASS`. Otherwise it's the
-    directory of this file (i.e. the back2 package directory).
+    Inside a PyInstaller bundle that's `sys._MEIPASS/back2/` (or `sys._MEIPASS`
+    flat). In source it's the parent of `back2/utils/` — i.e. `back2/` itself.
     """
     if getattr(sys, "frozen", False):
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
-            # Try the back2 subdirectory first (preserved package layout)
             back2_in_bundle = Path(meipass) / "back2"
             if back2_in_bundle.exists():
                 return back2_in_bundle
             return Path(meipass)
-    return Path(__file__).resolve().parent
+    # Source layout: this file is back2/utils/paths.py, so go up one level.
+    return Path(__file__).resolve().parent.parent
 
 
 def resource_path(name: str) -> Path:

@@ -3,12 +3,13 @@ Provider registry and factory for LLM providers.
 Easy to extend: just add new provider classes and register them.
 """
 
-from typing import Dict, Type, Literal, get_args
+from typing import Dict, Literal, Type
+
+from back2.providers.anythingllm import AnythingLLMProvider
 from back2.providers.base import LLMProvider
-from back2.providers.openai_provider import OpenAIProvider
-from back2.providers.groq_provider import GroqProvider
-from back2.providers.local_provider import LocalProvider
-from back2.providers.anythingllm_provider import AnythingLLMProvider
+from back2.providers.groq import GroqProvider
+from back2.providers.local import LocalProvider
+from back2.providers.openai import OpenAIProvider
 
 # Registry mapping provider names to classes
 PROVIDER_REGISTRY: Dict[str, Type[LLMProvider]] = {

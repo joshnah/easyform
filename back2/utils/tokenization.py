@@ -12,7 +12,7 @@ Callers always go through `count_tokens(text)`.
 import logging
 from typing import Callable, Optional
 
-from back2.paths import resource_path
+from back2.utils.paths import resource_path
 
 logger = logging.getLogger(__name__)
 

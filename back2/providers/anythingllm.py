@@ -6,7 +6,7 @@ import requests
 import logging
 from typing import Optional
 
-from back2.paths import resource_path
+from back2.utils.paths import resource_path
 from .base import LLMProvider
 
 logger = logging.getLogger(__name__)

@@ -3,9 +3,9 @@
 from pathlib import Path
 from typing import Dict, Optional
 
-from back2.context_searcher import ContextSearcher
-from back2.document_analyzer import DocumentAnalyzer
-from back2.form_fillers import get_filler_for_extension
+from back2.fillers import get_filler_for_extension
+from back2.pipeline.analyzer import DocumentAnalyzer
+from back2.pipeline.searcher import ContextSearcher
 
 
 class DocumentFirstWorkflow:

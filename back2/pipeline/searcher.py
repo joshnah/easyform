@@ -5,13 +5,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from back2.json_utils import parse_json_response
-from back2.prompts import context_search_prompt
+from back2.extraction.text import extract_text_from_file
+from back2.pipeline.prompts import context_search_prompt
 from back2.providers import get_provider
 from back2.schemas import FieldRequirement
-from back2.text_extraction import extract_text_from_file
-from back2.text_splitter import split_text
-from back2.tokenization import count_tokens
+from back2.utils.json_parser import parse_json_response
+from back2.utils.text_splitter import split_text
+from back2.utils.tokenization import count_tokens
 
 CONTEXT_WINDOW = 4090
 TOKENS_FOR_OUTPUT = 400  # reserved for the model's reply

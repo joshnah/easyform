@@ -1,7 +1,7 @@
 import os
 
-from back2.form_fillers.base_filler import BaseFiller, FillResult
-from back2.form_fillers.utils import ensure_ext
+from back2.fillers.base import BaseFiller, FillResult, ensure_ext
+
 
 class DocxFiller(BaseFiller):
     def _save(self, fill_result: FillResult, output_path: str) -> None:
