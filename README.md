@@ -1,6 +1,8 @@
 # EasyForm
 An LLM-powered form filler using on-device user documents - can run entirely offline, ensuring accuracy, privacy with great user experience
 
+> Detailed backend documentation lives in [docs/back2/](docs/back2/).
+
 ## Dependencies
 1. Backend:
 ```bash

@@ -1,5 +1,7 @@
 # Back2 - Document-First Form Filling Workflow
 
+> **Canonical docs are in [docs/back2/](../docs/back2/)** — read those for architecture, API reference, providers, configuration, migration plan, and troubleshooting. This file is kept here for proximity to the code.
+
 This directory contains a modified backend workflow that follows a **document-first approach** instead of the context-first approach used in the original `back` folder.
 
 ## Workflow Comparison

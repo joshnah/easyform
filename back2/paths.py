@@ -1,4 +1,4 @@
-"""Resolve paths to back2 resources (tokenizer.json, config.yaml).
+"""Resolve paths to back2 resources (tokenizer.json, config.json).
 
 Works whether running from source (CWD-independent) or inside a PyInstaller
 bundle (where files live under sys._MEIPASS).

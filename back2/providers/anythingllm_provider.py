@@ -1,9 +1,9 @@
+import json
 import os
 import time
 import uuid
 import requests
 import logging
-import yaml
 from typing import Optional
 
 from back2.paths import resource_path
@@ -30,7 +30,7 @@ class AnythingLLMProvider(LLMProvider):
         self.api_key = api_key
         self.base_url = base_url
         self.workspace_slug = workspace_slug
-        self.config_path = config_path or str(resource_path("config.yaml"))
+        self.config_path = config_path or str(resource_path("config.json"))
         self.timeout = timeout
         self.max_retries = max_retries
         self._headers = None
@@ -39,8 +39,8 @@ class AnythingLLMProvider(LLMProvider):
     def init_provider(self):
         """Initialize AnythingLLM client from config."""
         try:
-            with open(self.config_path, "r") as f:
-                config = yaml.safe_load(f)
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
         except FileNotFoundError:
             raise RuntimeError(f"Config file not found: {self.config_path}")
 

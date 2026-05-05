@@ -1,36 +1,20 @@
 """Analyze a document to identify fillable fields and their requirements."""
 
 import re
-import tempfile
 from typing import Dict, List, Optional, Tuple
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import PreTrainedTokenizerFast
-
 from back2.json_utils import parse_json_response
-from back2.paths import resource_path
 from back2.pattern_detection import detect_placeholder_pattern
 from back2.prompts import field_analysis_prompt
 from back2.providers import get_provider
 from back2.schemas import FieldRequirement
 from back2.text_extraction import extract_text_from_file
+from back2.tokenization import count_tokens
 
 CONTEXT_WINDOW = 4090
 PROMPT_OVERHEAD = 128
 TOKENS_PER_FIELD_OUTPUT = 10
 SURROUNDING_LINES = 3  # lines before/after each placeholder line for context
-
-_TOKENIZER: Optional[PreTrainedTokenizerFast] = None
-
-
-def _get_tokenizer() -> PreTrainedTokenizerFast:
-    """Module-level tokenizer cache (loading is the expensive part)."""
-    global _TOKENIZER
-    if _TOKENIZER is None:
-        _TOKENIZER = PreTrainedTokenizerFast(
-            tokenizer_file=str(resource_path("tokenizer.json"))
-        )
-    return _TOKENIZER
 
 
 class DocumentAnalyzer:
@@ -39,7 +23,6 @@ class DocumentAnalyzer:
     def __init__(self, provider: str = "groq"):
         self.provider = provider
         self._llm = get_provider(provider)
-        self.temp_dir = tempfile.mkdtemp(prefix="easyform_document_analysis_")
 
     def analyze_document(
         self, document_path: str
@@ -70,7 +53,6 @@ class DocumentAnalyzer:
             "lines": lines,
             "placeholder_pattern": placeholder_pattern,
             "total_fields": len(field_requirements),
-            "temp_dir": self.temp_dir,
         }
         return field_requirements, metadata
 
@@ -113,13 +95,12 @@ class DocumentAnalyzer:
         if not found_fields:
             return []
 
-        tokenizer = _get_tokenizer()
         per_field_cap = CONTEXT_WINDOW - PROMPT_OVERHEAD - TOKENS_PER_FIELD_OUTPUT
 
         sized: List[Tuple[FieldRequirement, int]] = []
         for f in found_fields:
             combined = (f.field_text or "") + "\n" + (f.surrounding_context or "")
-            count = len(tokenizer.encode(combined))
+            count = count_tokens(combined)
             if count <= per_field_cap:
                 sized.append((f, count))
             else:

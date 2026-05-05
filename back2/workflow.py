@@ -1,8 +1,5 @@
 """Main workflow orchestrator for the back2 document-first approach."""
 
-import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -23,7 +20,6 @@ class DocumentFirstWorkflow:
         self.provider = provider
         self.document_analyzer = DocumentAnalyzer(provider)
         self.context_searcher = ContextSearcher(provider)
-        self.temp_dir = tempfile.mkdtemp(prefix="easyform_workflow_")
 
     def process_document(
         self, document_path: str, context_dir: str, output_path: Optional[str] = None
@@ -51,7 +47,7 @@ class DocumentFirstWorkflow:
             )
         form_filler.save_filled_document(fill_result, output_path, extension=ext)
 
-        summary = self._build_summary(
+        return self._build_summary(
             document_path=document_path,
             output_path=output_path,
             context_dir=context_dir,
@@ -59,13 +55,9 @@ class DocumentFirstWorkflow:
             fill_result=fill_result,
         )
 
-        summary_file = os.path.join(self.temp_dir, "workflow_summary.json")
-        with open(summary_file, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=False)
-        return summary
-
+    @staticmethod
     def _build_summary(
-        self, document_path, output_path, context_dir, field_requirements, fill_result
+        document_path, output_path, context_dir, field_requirements, fill_result
     ) -> Dict:
         required_keys = {r.context_key for r in field_requirements if r.context_key}
         found_keys = {r.context_key for r in field_requirements if r.value}
@@ -91,11 +83,6 @@ class DocumentFirstWorkflow:
                 "success": fill_result.success,
                 "filled_field_ids": fill_result.filled_fields,
                 "unfilled_field_ids": fill_result.unfilled_fields,
-            },
-            "temp_directories": {
-                "workflow": self.temp_dir,
-                "analysis": self.document_analyzer.temp_dir,
-                "search": self.context_searcher.temp_dir,
             },
         }
 

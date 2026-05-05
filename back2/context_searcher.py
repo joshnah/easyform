@@ -2,36 +2,25 @@
 
 import json
 import os
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import PreTrainedTokenizerFast
-
 from back2.json_utils import parse_json_response
-from back2.paths import resource_path
 from back2.prompts import context_search_prompt
 from back2.providers import get_provider
 from back2.schemas import FieldRequirement
 from back2.text_extraction import extract_text_from_file
+from back2.text_splitter import split_text
+from back2.tokenization import count_tokens
 
 CONTEXT_WINDOW = 4090
 TOKENS_FOR_OUTPUT = 400  # reserved for the model's reply
 BATCH_SIZE = 10  # field keys per LLM call
 SUPPORTED_EXTS = {".txt", ".md", ".json", ".pdf", ".docx"}
 
-_TOKENIZER: Optional[PreTrainedTokenizerFast] = None
-
-
-def _get_tokenizer() -> PreTrainedTokenizerFast:
-    """Module-level tokenizer cache (loading is the expensive part)."""
-    global _TOKENIZER
-    if _TOKENIZER is None:
-        _TOKENIZER = PreTrainedTokenizerFast(
-            tokenizer_file=str(resource_path("tokenizer.json"))
-        )
-    return _TOKENIZER
+# `count_tokens` reports tokens; `split_text` works in characters. Use the
+# heuristic 1 token ≈ 4 chars so the token-budget guides the char-based split.
+CHARS_PER_TOKEN = 4
 
 
 class ContextSearcher:
@@ -40,7 +29,6 @@ class ContextSearcher:
     def __init__(self, provider: str = "groq"):
         self.provider = provider
         self._llm = get_provider(provider)
-        self.temp_dir = tempfile.mkdtemp(prefix="easyform_context_search_")
 
     def search_context(
         self, field_requirements: List[FieldRequirement], context_dir: str
@@ -165,25 +153,21 @@ class ContextSearcher:
         """
         Split each text block to fit a single LLM call (after accounting for
         prompt overhead and reserved output), then greedily merge the resulting
-        sub-chunks. Each encode is performed once and reused.
+        sub-chunks. Token counts are computed once per chunk and reused.
         """
-        tokenizer = _get_tokenizer()
-        prompt_len = len(tokenizer.encode(placeholder_prompt))
-        budget = CONTEXT_WINDOW - prompt_len - TOKENS_FOR_OUTPUT
-
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=budget, chunk_overlap=50
-        )
+        prompt_tokens = count_tokens(placeholder_prompt)
+        budget_tokens = CONTEXT_WINDOW - prompt_tokens - TOKENS_FOR_OUTPUT
+        budget_chars = max(1, budget_tokens * CHARS_PER_TOKEN)
 
         chunk_token_counts: List[Tuple[str, int]] = []
         for chunk in all_text:
-            chunk_tokens = tokenizer.encode(chunk)
-            if len(chunk_tokens) <= budget:
-                chunk_token_counts.append((chunk, len(chunk_tokens)))
+            tokens = count_tokens(chunk)
+            if tokens <= budget_tokens:
+                chunk_token_counts.append((chunk, tokens))
                 continue
 
-            for sub in splitter.split_text(chunk):
-                chunk_token_counts.append((sub, len(tokenizer.encode(sub))))
+            for sub in split_text(chunk, chunk_size=budget_chars, chunk_overlap=50):
+                chunk_token_counts.append((sub, count_tokens(sub)))
 
         # Pack small chunks together (smallest first) for fewer LLM calls.
         chunk_token_counts.sort(key=lambda x: x[1])
@@ -192,7 +176,7 @@ class ContextSearcher:
         current_text = ""
         current_tokens = 0
         for text, tokens in chunk_token_counts:
-            if current_text and current_tokens + tokens > budget:
+            if current_text and current_tokens + tokens > budget_tokens:
                 merged.append(current_text)
                 current_text = text
                 current_tokens = tokens

@@ -1,17 +1,20 @@
-python-docx
-pypdf
-pytesseract
-Pillow
-PyMuPDF
-openai
-groq
-pdfplumber
-pdf2image
-requests
-docling
-easyocr
+# Base requirements for back2 (the current backend).
+# All native back2 endpoints + the lightweight legacy compat endpoints
+# (/form/text, /pattern/detect, /fill-entries/*, /checkbox-entries/*,
+# /pdf/fill, /docx/fill) work with these alone.
+#
+# For the heavyweight `/context/extract` compat endpoint (OCR + Docling
+# layout extraction in back/context_extractor.py), also install
+# requirements-extras.txt.
+
 fastapi
 uvicorn
-transformers
-langchain
-pyyaml
+PyMuPDF
+python-docx
+openai
+groq
+requests
+tokenizers
+
+# Used only by the lightweight compat endpoints (back/text_extraction.py):
+pypdf

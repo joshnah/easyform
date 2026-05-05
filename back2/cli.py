@@ -124,11 +124,6 @@ def run_workflow(args):
             print(f"\nDetailed Results:")
             print(json.dumps(result, indent=2))
 
-        if not args.save_temp:
-            print(f"\nTemporary files saved in:")
-            for name, path in result["temp_directories"].items():
-                print(f"  {name}: {path}")
-
         if result["filling"]["success"]:
             print(f"\n✅ Document successfully filled!")
             sys.exit(0)

@@ -1,5 +1,0 @@
-api_key: "YOUR_API_KEY"
-model_server_base_url: "http://localhost:3001/api/v1"
-workspace_slug: "WORKSPACE_MODEL"
-stream: false
-stream_timeout: 60

@@ -1,0 +1,19 @@
+# Optional heavy dependencies, only required for the legacy
+# `POST /context/extract` compat endpoint, which delegates into
+# back/context_extractor.py (OCR via Tesseract, layout via Docling).
+#
+# Skip this file on edge devices that don't run /context/extract — back2's
+# native pipeline (`/document/analyze`, `/context/search`, `/document/fill`,
+# `/process`) does not need any of these.
+
+# OCR
+pytesseract        # requires the `tesseract` system binary
+Pillow             # image preprocessing
+easyocr            # OCR fallback (pulls torch via transitive deps)
+
+# PDF -> image / layout
+pdfplumber
+pdf2image          # requires the `poppler` system binary
+
+# Layout-aware document parsing
+docling
