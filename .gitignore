@@ -91,3 +91,5 @@ genie_bundle
 .vscode/
 backend/
 model
+
+docs/
